@@ -1,0 +1,159 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - strong [ref=e10]: PetDaily
+      - navigation [ref=e11]:
+        - button "今天" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e16]: 今天
+        - button "记录" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e20]: 记录
+        - button "洞察" [ref=e21] [cursor=pointer]:
+          - img [ref=e22]
+          - generic [ref=e25]: 洞察
+        - button "相册" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e30]: 相册
+        - button "我的" [ref=e31] [cursor=pointer]:
+          - img [ref=e32]
+          - generic [ref=e35]: 我的
+    - main [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - img "豆包" [ref=e40]
+            - generic [ref=e41]:
+              - text: PetDaily
+              - heading "豆包" [level=1] [ref=e42]
+              - paragraph [ref=e43]: 西高地白梗 · 2 月 4 周 · 正在建立幼犬节奏
+          - button "记录刚发生的事" [ref=e44] [cursor=pointer]:
+            - img [ref=e45]
+            - text: 记录刚发生的事
+        - region "今日概览" [ref=e46]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: 今日记录
+            - strong [ref=e49]: 5 条
+            - generic [ref=e50]: 饮食 / 如厕 / 观察
+          - generic [ref=e51]:
+            - generic [ref=e52]: 最近体重
+            - strong [ref=e53]: 3.2 kg
+            - generic [ref=e54]: +0.09kg
+          - generic [ref=e55]:
+            - generic [ref=e56]: 待提醒
+            - strong [ref=e57]: 6 个
+            - generic [ref=e58]: 应用内计划
+          - generic [ref=e59]:
+            - generic [ref=e60]: 累计花费
+            - strong [ref=e61]: ¥507
+            - generic [ref=e62]: MVP 本地账本
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - img [ref=e66]
+            - generic [ref=e68]:
+              - paragraph [ref=e69]: 豆包今日养育简报
+              - text: AI 教练基于最近记录给出保守建议
+          - generic [ref=e70]:
+            - paragraph [ref=e71]: 做得好的地方：最近体重记录为 3.2kg，建议每周固定时间称重。
+            - paragraph [ref=e72]: 下一步建议：今天饮食记录偏少，建议补齐早中晚喂食量，方便观察食欲。 幼犬膀胱控制还在发育，醒后、饭后、玩耍后都可以安排一次如厕。
+            - paragraph [ref=e73]: 健康相关判断不能替代兽医诊断；若持续呕吐、腹泻、精神差或拒食，请及时联系兽医。
+            - paragraph
+            - paragraph [ref=e74]: 当前使用本地规则生成；配置 OPENAI_API_KEY 后会启用在线 AI 教练。
+          - button "生成今日建议" [ref=e75] [cursor=pointer]:
+            - img [ref=e76]
+            - text: 生成今日建议
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - paragraph [ref=e83]: 今天的时间日记
+            - generic [ref=e84]: 按发生时间倒序
+          - generic [ref=e85]:
+            - article [ref=e86]:
+              - img [ref=e88]
+              - generic [ref=e91]:
+                - generic [ref=e92]:
+                  - strong [ref=e93]: 晚餐完成
+                  - generic [ref=e94]: 05/05 18:30
+                - paragraph [ref=e95]: 45g
+                - paragraph [ref=e96]: 饭后 20 分钟外出。
+            - article [ref=e97]:
+              - img [ref=e99]
+              - generic [ref=e104]:
+                - generic [ref=e105]:
+                  - strong [ref=e106]: 上午便便
+                  - generic [ref=e107]: 05/05 10:18
+                - paragraph [ref=e108]: 1次
+                - paragraph [ref=e109]: 状态正常。
+            - article [ref=e110]:
+              - img [ref=e112]
+              - generic [ref=e115]:
+                - generic [ref=e116]:
+                  - strong [ref=e117]: 第一次认真看镜头
+                  - generic [ref=e118]: 05/05 09:20
+                - paragraph [ref=e119]: 耳朵还没完全立稳。
+                - img "第一次认真看镜头" [ref=e120]
+            - article [ref=e121]:
+              - img [ref=e123]
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - strong [ref=e130]: 饭后尿尿
+                  - generic [ref=e131]: 05/05 08:09
+                - paragraph [ref=e132]: 1次
+                - paragraph [ref=e133]: 比昨天更快进入状态。
+            - article [ref=e134]:
+              - img [ref=e136]
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - strong [ref=e141]: 早餐完成
+                  - generic [ref=e142]: 05/05 07:35
+                - paragraph [ref=e143]: 44g
+                - paragraph [ref=e144]: 精神好，未挑食。
+        - complementary [ref=e145]:
+          - generic [ref=e146]:
+            - paragraph [ref=e147]: 下一步提醒
+            - generic [ref=e148]: 第一版为应用内计划
+          - generic [ref=e149]:
+            - article [ref=e150]:
+              - generic [ref=e151]:
+                - strong [ref=e152]: 07:30
+                - text: 喂食
+              - paragraph [ref=e153]: 早餐 45g 幼犬粮
+              - button [ref=e154] [cursor=pointer]:
+                - img [ref=e155]
+            - article [ref=e157]:
+              - generic [ref=e158]:
+                - strong [ref=e159]: 08:05
+                - text: 外出如厕
+              - paragraph [ref=e160]: 早餐后外出如厕
+              - button [ref=e161] [cursor=pointer]:
+                - img [ref=e162]
+            - article [ref=e164]:
+              - generic [ref=e165]:
+                - strong [ref=e166]: 09:00
+                - text: 驱虫
+              - paragraph [ref=e167]: 下一次体内外驱虫
+              - button [ref=e168] [cursor=pointer]:
+                - img [ref=e169]
+            - article [ref=e171]:
+              - generic [ref=e172]:
+                - strong [ref=e173]: 12:30
+                - text: 喂食
+              - paragraph [ref=e174]: 午间训练零食
+              - button [ref=e175] [cursor=pointer]:
+                - img [ref=e176]
+            - article [ref=e178]:
+              - generic [ref=e179]:
+                - strong [ref=e180]: 18:30
+                - text: 喂食
+              - paragraph [ref=e181]: 晚餐 45g 幼犬粮
+              - button [ref=e182] [cursor=pointer]:
+                - img [ref=e183]
+            - article [ref=e185]:
+              - generic [ref=e186]:
+                - strong [ref=e187]: 22:00
+                - text: 外出如厕
+              - paragraph [ref=e188]: 睡前如厕
+              - button [ref=e189] [cursor=pointer]:
+                - img [ref=e190]
+  - alert [ref=e192]

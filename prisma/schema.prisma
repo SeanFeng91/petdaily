@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model PetProfile {
+  id             String          @id @default(cuid())
+  name           String
+  breed          String
+  sex            String
+  birthday       DateTime
+  avatarUrl      String?
+  currentWeight  Float?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  timelineEvents TimelineEvent[]
+  reminders      Reminder[]
+  weightRecords  WeightRecord[]
+  expenses       Expense[]
+  photos         PhotoAsset[]
+  insights       AiInsight[]
+}
+
+model TimelineEvent {
+  id         String     @id @default(cuid())
+  petId      String
+  type       String
+  title      String
+  note       String?
+  happenedAt DateTime
+  amount     Float?
+  unit       String?
+  metadata   String     @default("{}")
+  photoUrl   String?
+  createdAt  DateTime   @default(now())
+  pet        PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, happenedAt])
+  @@index([type])
+}
+
+model Reminder {
+  id            String     @id @default(cuid())
+  petId         String
+  kind          String
+  title         String
+  scheduledTime String
+  weekdays      String     @default("1,2,3,4,5,6,7")
+  active        Boolean    @default(true)
+  nextDueAt     DateTime?
+  note          String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  pet           PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, active])
+}
+
+model WeightRecord {
+  id         String     @id @default(cuid())
+  petId      String
+  measuredAt DateTime
+  weightKg   Float
+  note       String?
+  createdAt  DateTime   @default(now())
+  pet        PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, measuredAt])
+}
+
+model Expense {
+  id          String     @id @default(cuid())
+  petId       String
+  category    String
+  itemName    String
+  amountCents Int
+  purchasedAt DateTime
+  note        String?
+  createdAt   DateTime   @default(now())
+  pet         PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, purchasedAt])
+  @@index([category])
+}
+
+model PhotoAsset {
+  id            String     @id @default(cuid())
+  petId         String
+  url           String
+  caption       String?
+  takenAt       DateTime
+  linkedEventId String?
+  createdAt     DateTime   @default(now())
+  pet           PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, takenAt])
+}
+
+model AiInsight {
+  id          String     @id @default(cuid())
+  petId       String
+  scope       String
+  title       String
+  body        String
+  riskLevel   String     @default("info")
+  generatedAt DateTime   @default(now())
+  createdAt   DateTime   @default(now())
+  pet         PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, generatedAt])
+  @@index([scope])
+}

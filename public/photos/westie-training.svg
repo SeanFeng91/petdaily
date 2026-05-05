@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <rect width="900" height="1100" fill="#f0f7f1"/>
+  <rect x="0" y="755" width="900" height="345" fill="#9dd6a8"/>
+  <circle cx="450" cy="610" r="215" fill="#fffdf7"/>
+  <path d="M315 450 390 280l54 185zM585 450 510 280l-54 185z" fill="#fff8e8"/>
+  <circle cx="385" cy="604" r="24" fill="#21313a"/>
+  <circle cx="525" cy="604" r="24" fill="#21313a"/>
+  <path d="M445 662q10-16 30 0-4 26-15 32-11-5-15-32z" fill="#21313a"/>
+  <circle cx="675" cy="730" r="48" fill="#f2a65a"/>
+  <text x="450" y="980" text-anchor="middle" font-family="Georgia, serif" font-size="48" fill="#26323d">坐下训练</text>
+</svg>

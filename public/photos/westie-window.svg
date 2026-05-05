@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <rect width="900" height="1100" fill="#eaf5ff"/>
+  <rect x="110" y="90" width="680" height="460" rx="34" fill="#9dd8ff"/>
+  <path d="M120 480c160-130 330-110 520 0 85 48 140 60 150 60v470H120z" fill="#8fd3bd"/>
+  <circle cx="455" cy="640" r="220" fill="#fffdf7"/>
+  <path d="M310 470 390 300l55 190zM600 470 520 300l-55 190z" fill="#fff8e8"/>
+  <circle cx="385" cy="635" r="24" fill="#1f2933"/>
+  <circle cx="525" cy="635" r="24" fill="#1f2933"/>
+  <path d="M445 696q10-18 30 0-4 26-15 32-11-6-15-32z" fill="#1f2933"/>
+  <text x="450" y="1010" text-anchor="middle" font-family="Georgia, serif" font-size="48" fill="#26323d">窗边观察</text>
+</svg>

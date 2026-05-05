@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <rect width="900" height="1100" fill="#1f2a44"/>
+  <circle cx="720" cy="150" r="82" fill="#f8e8a6"/>
+  <ellipse cx="450" cy="690" rx="300" ry="210" fill="#fffdf7"/>
+  <path d="M245 620q70-150 160-170l35 125zM655 620q-70-150-160-170l-35 125z" fill="#fff8e8"/>
+  <path d="M350 700q45 30 90 0M465 700q45 30 90 0" fill="none" stroke="#26323d" stroke-width="18" stroke-linecap="round"/>
+  <path d="M445 754q10-16 30 0-4 24-15 30-11-6-15-30z" fill="#26323d"/>
+  <text x="450" y="980" text-anchor="middle" font-family="Georgia, serif" font-size="48" fill="#f6f2e7">睡前安静</text>
+</svg>

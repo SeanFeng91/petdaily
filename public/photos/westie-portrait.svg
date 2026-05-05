@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#dff8ee"/>
+      <stop offset="1" stop-color="#ffe3ed"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" fill="url(#bg)"/>
+  <circle cx="450" cy="440" r="245" fill="#fffaf2"/>
+  <path d="M285 255 365 85l62 188zM615 255 535 85l-62 188z" fill="#fff7e8"/>
+  <circle cx="360" cy="415" r="28" fill="#27313c"/>
+  <circle cx="540" cy="415" r="28" fill="#27313c"/>
+  <path d="M440 480q10-16 28 0-4 28-14 34-12-4-14-34z" fill="#222"/>
+  <path d="M340 560q110 80 220 0" fill="none" stroke="#d8b9a7" stroke-width="18" stroke-linecap="round"/>
+  <text x="450" y="790" text-anchor="middle" font-family="Georgia, serif" font-size="52" fill="#26323d">豆包 · 3个月</text>
+</svg>
