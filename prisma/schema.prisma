@@ -53,6 +53,7 @@ model Reminder {
   weekdays      String     @default("1,2,3,4,5,6,7")
   active        Boolean    @default(true)
   nextDueAt     DateTime?
+  lastDoneAt    DateTime?
   note          String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt

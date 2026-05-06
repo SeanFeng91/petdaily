@@ -17,9 +17,9 @@
 
 ## V0.3 Cloudflare 同步
 
-- D1 保存结构化数据。
+- D1 保存结构化数据。已接入 Worker 运行时的 `DB` binding。
 - R2 保存照片。
-- Pages 部署前端。
+- Cloudflare Workers 部署 Next.js 应用，手机端打开线上 URL 即可使用。
 - 多端登录和同步状态提示。
 
 ## V0.4 AI 深化

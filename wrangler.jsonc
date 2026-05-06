@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "petdaily",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-05-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "petdaily",
+      "database_id": "b8fd6408-d8ac-4c4e-89c6-609ddae9372b",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "PETDAILY_DATA_PROVIDER": "d1",
+    "OPENAI_MODEL": "gpt-4.1-mini"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

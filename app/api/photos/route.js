@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createPhoto, deletePhoto, listPhotos } from "@/lib/pet-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const petId = searchParams.get("petId");
-  const photos = await prisma.photoAsset.findMany({
-    where: petId ? { petId } : undefined,
-    orderBy: { takenAt: "desc" },
-    take: 80
-  });
-
+  const photos = await listPhotos(petId);
   return NextResponse.json({ photos });
 }
 
@@ -21,25 +16,18 @@ export async function POST(request) {
     return NextResponse.json({ message: "petId and url are required" }, { status: 400 });
   }
 
-  const photo = await prisma.photoAsset.create({
-    data: {
-      petId: body.petId,
-      url: body.url.trim(),
-      caption: body.caption?.trim() || "成长照片",
-      takenAt: body.takenAt ? new Date(body.takenAt) : new Date()
-    }
-  });
-
-  await prisma.timelineEvent.create({
-    data: {
-      petId: body.petId,
-      type: "PHOTO",
-      title: photo.caption || "成长照片",
-      happenedAt: photo.takenAt,
-      photoUrl: photo.url,
-      metadata: JSON.stringify({ photoId: photo.id })
-    }
-  });
-
+  const photo = await createPhoto(body);
   return NextResponse.json({ photo });
+}
+
+export async function DELETE(request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ message: "id is required" }, { status: 400 });
+  }
+
+  const result = await deletePhoto(id);
+  return NextResponse.json({ result });
 }

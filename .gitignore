@@ -4,7 +4,10 @@ out
 dist
 .env
 .env.local
+.dev.vars
 data/*.db
 data/*.db-journal
+.open-next
+.wrangler
 *.log
 .DS_Store

@@ -1,27 +1,35 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Bell,
   BookOpen,
   Camera,
   Check,
+  CheckCircle2,
   CircleDollarSign,
+  Clock3,
   Dog,
   HeartPulse,
   Home,
   ImagePlus,
   LineChart,
+  PauseCircle,
+  Pencil,
   PawPrint,
+  PlayCircle,
   Plus,
   RefreshCw,
   Settings,
   Sparkles,
   Syringe,
+  Trash2,
+  Upload,
   Utensils
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ExpenseChart, WeightChart } from "@/components/charts-panel";
+import { compressImageFile } from "@/components/image-file";
 import QuickRecordSheet from "@/components/quick-record-sheet";
 import {
   EVENT_TYPES,
@@ -29,12 +37,11 @@ import {
   REMINDER_KINDS,
   formatCurrency,
   formatDate,
-  formatDateTime,
-  getAgeText
+  formatDateTime
 } from "@/lib/domain";
 
 const navItems = [
-  { id: "today", label: "今天", icon: Home },
+  { id: "today", label: "时间轴", icon: Home },
   { id: "record", label: "记录", icon: BookOpen },
   { id: "insights", label: "洞察", icon: LineChart },
   { id: "photos", label: "相册", icon: Camera },
@@ -58,6 +65,26 @@ function getTodayStart() {
   return today;
 }
 
+function isSameDay(value, now = new Date()) {
+  if (!value) return false;
+  const date = new Date(value);
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function getReminderStatus(reminder, now = new Date()) {
+  if (!reminder.active) return { key: "paused", label: "已暂停" };
+  if (isSameDay(reminder.lastDoneAt, now)) return { key: "done", label: "今日已完成" };
+  const [hours, minutes] = reminder.scheduledTime.split(":").map(Number);
+  const dueAt = new Date(now);
+  dueAt.setHours(hours || 0, minutes || 0, 0, 0);
+  if (dueAt <= now) return { key: "due", label: "已到点" };
+  return { key: "upcoming", label: "稍后" };
+}
+
 function getExpenseSummary(expenses) {
   const totalCents = expenses.reduce((sum, item) => sum + item.amountCents, 0);
   const byCategory = expenses.reduce((acc, item) => {
@@ -65,6 +92,52 @@ function getExpenseSummary(expenses) {
     return acc;
   }, {});
   return { totalCents, byCategory };
+}
+
+function sortExpenses(expenses) {
+  return [...expenses].sort((a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt));
+}
+
+function sortWeightRecords(weightRecords) {
+  return [...weightRecords].sort((a, b) => new Date(a.measuredAt) - new Date(b.measuredAt));
+}
+
+function localDateValue(value = new Date()) {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+}
+
+function localDateTimeValue(value = new Date()) {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+}
+
+function getTimelineDateKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+function formatTimelineDate(value) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date(value));
+}
+
+function formatTimelineWeekday(value) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    weekday: "short"
+  }).format(new Date(value));
+}
+
+function formatTimelineTime(value) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(new Date(value));
 }
 
 function getDerivedData(data) {
@@ -89,7 +162,7 @@ function getDerivedData(data) {
       latestWeight && previousWeight
         ? Number((latestWeight.weightKg - previousWeight.weightKg).toFixed(2))
         : null,
-    activeReminders: data.reminders.filter((item) => item.active),
+    activeReminders: data.reminders.filter((item) => item.active && !isSameDay(item.lastDoneAt)),
     expenseSummary
   };
 }
@@ -113,16 +186,6 @@ function EmptyState() {
       <h1>PetDaily 需要初始化数据</h1>
       <p>请先运行数据库脚本：`npm run db:push` 和 `npm run db:seed`。</p>
     </main>
-  );
-}
-
-function MetricItem({ label, value, detail }) {
-  return (
-    <div className="metricItem">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {detail ? <small>{detail}</small> : null}
-    </div>
   );
 }
 
@@ -154,7 +217,7 @@ function CoachPanel({ pet, localCoach, latestInsight, onGenerate, loading }) {
   );
 }
 
-function TimelineList({ events, compact = false }) {
+function TimelineList({ events, compact = false, onDelete }) {
   if (!events.length) {
     return <p className="mutedText">还没有记录。先从喂食、如厕或体重开始。</p>;
   }
@@ -173,6 +236,12 @@ function TimelineList({ events, compact = false }) {
               <div className="timelineTopline">
                 <strong>{event.title}</strong>
                 <span>{formatDateTime(event.happenedAt)}</span>
+                {onDelete ? (
+                  <button className="miniDangerButton" type="button" onClick={() => onDelete(event)}>
+                    <Trash2 size={15} />
+                    <span>删除</span>
+                  </button>
+                ) : null}
               </div>
               {event.amount ? (
                 <p className="eventAmount">
@@ -190,86 +259,196 @@ function TimelineList({ events, compact = false }) {
   );
 }
 
-function ReminderList({ reminders, onToggle }) {
+function TimelineStream({ events, onDelete }) {
+  const groups = useMemo(() => {
+    const grouped = [];
+    const index = new Map();
+
+    for (const event of events) {
+      const key = getTimelineDateKey(event.happenedAt);
+      if (!index.has(key)) {
+        const group = { key, date: event.happenedAt, events: [] };
+        grouped.push(group);
+        index.set(key, group);
+      }
+      index.get(key).events.push(event);
+    }
+
+    return grouped;
+  }, [events]);
+
+  if (!events.length) {
+    return <p className="mutedText">还没有记录。先从刚发生的事件开始写一条。</p>;
+  }
+
   return (
-    <div className="reminderList">
-      {reminders.map((reminder) => (
-        <article className={`reminderItem ${reminder.active ? "" : "inactive"}`} key={reminder.id}>
-          <div>
-            <strong>{reminder.scheduledTime}</strong>
-            <span>{REMINDER_KINDS[reminder.kind] || reminder.kind}</span>
+    <div className="timelineStream">
+      {groups.map((group) => (
+        <section className="timelineDayGroup" key={group.key}>
+          <div className="timelineDay">
+            <strong>{formatTimelineDate(group.date)}</strong>
+            <span>{formatTimelineWeekday(group.date)}</span>
           </div>
-          <p>{reminder.title}</p>
-          <button className="checkButton" type="button" onClick={() => onToggle(reminder)}>
-            {reminder.active ? <Check size={16} /> : <Bell size={16} />}
-          </button>
-        </article>
+          <div className="timelineEntries">
+            {group.events.map((event) => {
+              const Icon = eventIcons[event.type] || BookOpen;
+              const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
+              return (
+                <article className={`timelineEntry tone-${meta.tone}`} key={event.id}>
+                  <div className="timelineEntryTime">{formatTimelineTime(event.happenedAt)}</div>
+                  <div className="timelineEntryDot" />
+                  <div className="timelineEntryBody">
+                    <div className="timelineEntryHeader">
+                      <span className={`timelineType tone-${meta.tone}`}>
+                        <Icon size={14} />
+                        {meta.label}
+                      </span>
+                      <strong>{event.title}</strong>
+                      {event.amount ? (
+                        <b>
+                          {event.amount}
+                          {event.unit || meta.unit}
+                        </b>
+                      ) : null}
+                      {onDelete ? (
+                        <button className="miniDangerButton" type="button" onClick={() => onDelete(event)}>
+                          <Trash2 size={15} />
+                          删除
+                        </button>
+                      ) : null}
+                    </div>
+                    {event.note ? <p>{event.note}</p> : null}
+                    {event.photoUrl ? <img className="timelineEntryPhoto" src={event.photoUrl} alt={event.title} /> : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       ))}
     </div>
   );
 }
 
-function TodayView({ data, derived, onOpenRecord, onGenerateInsight, aiLoading, onToggleReminder }) {
-  const { pet, localCoach, insights } = data;
-  const latestInsight = insights[0];
-  const ageText = getAgeText(pet.birthday);
-
+function ReminderList({ reminders, onComplete, onToggle, onDelete }) {
   return (
-    <div className="workspaceGrid">
-      <section className="heroPanel">
-        <div className="petIdentity">
-          <img src={pet.avatarUrl || "/photos/westie-portrait.svg"} alt={pet.name} />
-          <div>
-            <span>PetDaily</span>
-            <h1>{pet.name}</h1>
-            <p>{pet.breed} · {ageText} · 正在建立幼犬节奏</p>
-          </div>
-        </div>
-        <button className="primaryButton" type="button" onClick={onOpenRecord}>
-          <Plus size={18} />
-          记录刚发生的事
-        </button>
-      </section>
-
-      <section className="metricStrip" aria-label="今日概览">
-        <MetricItem label="今日记录" value={`${derived.todayEvents.length} 条`} detail="饮食 / 如厕 / 观察" />
-        <MetricItem
-          label="最近体重"
-          value={`${derived.latestWeight?.weightKg || pet.currentWeight || "-"} kg`}
-          detail={derived.weightDelta !== null ? `${derived.weightDelta > 0 ? "+" : ""}${derived.weightDelta}kg` : "等待更多记录"}
-        />
-        <MetricItem label="待提醒" value={`${derived.activeReminders.length} 个`} detail="应用内计划" />
-        <MetricItem label="累计花费" value={formatCurrency(derived.expenseSummary.totalCents)} detail="MVP 本地账本" />
-      </section>
-
-      <CoachPanel
-        pet={pet}
-        localCoach={localCoach}
-        latestInsight={latestInsight}
-        onGenerate={onGenerateInsight}
-        loading={aiLoading}
-      />
-
-      <section className="contentPanel">
-        <div className="sectionHeading">
-          <p>今天的时间日记</p>
-          <span>按发生时间倒序</span>
-        </div>
-        <TimelineList events={derived.todayEvents.length ? derived.todayEvents : derived.timelineEvents.slice(0, 6)} />
-      </section>
-
-      <aside className="sidePanel">
-        <div className="sectionHeading">
-          <p>下一步提醒</p>
-          <span>第一版为应用内计划</span>
-        </div>
-        <ReminderList reminders={data.reminders.slice(0, 6)} onToggle={onToggleReminder} />
-      </aside>
+    <div className="reminderList">
+      {reminders.map((reminder) => {
+        const status = getReminderStatus(reminder);
+        return (
+          <article className={`reminderItem status-${status.key}`} key={reminder.id}>
+            <div>
+              <strong>{reminder.scheduledTime}</strong>
+              <span>{REMINDER_KINDS[reminder.kind] || reminder.kind}</span>
+            </div>
+            <p>{reminder.title}</p>
+            <span className="reminderStatus"><Clock3 size={13} />{status.label}</span>
+            <div className="reminderActions">
+              <button className="checkButton" type="button" onClick={() => onComplete(reminder)} aria-label="完成提醒">
+                {status.key === "done" ? <CheckCircle2 size={16} /> : <Check size={16} />}
+              </button>
+              <button className="checkButton" type="button" onClick={() => onToggle(reminder)} aria-label={reminder.active ? "暂停提醒" : "启用提醒"}>
+                {reminder.active ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
+              </button>
+              {onDelete ? (
+                <button className="checkButton danger" type="button" onClick={() => onDelete(reminder)} aria-label="删除提醒">
+                  <Trash2 size={16} />
+                </button>
+              ) : null}
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }
 
-function RecordView({ events, onOpenRecord }) {
+function TodayView({
+  data,
+  derived,
+  onOpenRecord,
+  onGenerateInsight,
+  aiLoading,
+  onCompleteReminder,
+  onToggleReminder,
+  onDeleteEvent
+}) {
+  const { pet, localCoach, insights } = data;
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const latestInsight = insights[0];
+  const filteredEvents = useMemo(
+    () =>
+      typeFilter === "ALL"
+        ? derived.timelineEvents
+        : derived.timelineEvents.filter((event) => event.type === typeFilter),
+    [derived.timelineEvents, typeFilter]
+  );
+
+  return (
+    <div className="timelineWorkspace">
+      <section className="timelineCommandBar">
+        <div>
+          <h1>时间轴</h1>
+          <p>按发生时间持续记录事件，最近的变化始终排在最前。</p>
+        </div>
+        <button className="primaryButton" type="button" onClick={onOpenRecord}>
+          <Plus size={18} />
+          新增事件
+        </button>
+      </section>
+
+      <div className="timelineLayout">
+        <section className="timelinePanel">
+          <div className="timelineToolbar">
+            <div>
+              <p>事件流</p>
+              <span>{filteredEvents.length} 条记录</span>
+            </div>
+            <div className="timelineFilterStrip" aria-label="时间轴筛选">
+              <button
+                className={`filterChip ${typeFilter === "ALL" ? "selected" : ""}`}
+                type="button"
+                onClick={() => setTypeFilter("ALL")}
+              >
+                全部
+              </button>
+              {Object.entries(EVENT_TYPES).map(([key, value]) => (
+                <button
+                  className={`filterChip ${typeFilter === key ? "selected" : ""}`}
+                  type="button"
+                  key={key}
+                  onClick={() => setTypeFilter(key)}
+                >
+                  {value.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <TimelineStream events={filteredEvents} onDelete={onDeleteEvent} />
+        </section>
+
+        <aside className="timelineAside">
+          <section className="contentPanel compactPanel">
+            <div className="sectionHeading">
+              <p>待办提醒</p>
+              <span>完成 / 暂停</span>
+            </div>
+            <ReminderList reminders={data.reminders.slice(0, 5)} onComplete={onCompleteReminder} onToggle={onToggleReminder} />
+          </section>
+          <CoachPanel
+            pet={pet}
+            localCoach={localCoach}
+            latestInsight={latestInsight}
+            onGenerate={onGenerateInsight}
+            loading={aiLoading}
+          />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function RecordView({ events, onOpenRecord, onDeleteEvent }) {
   return (
     <section className="singleColumn">
       <div className="pageHeader">
@@ -287,31 +466,125 @@ function RecordView({ events, onOpenRecord }) {
           <span className={`legendPill tone-${value.tone}`} key={key}>{value.label}</span>
         ))}
       </div>
-      <TimelineList events={events} />
+      <TimelineList events={events} onDelete={onDeleteEvent} />
     </section>
   );
 }
 
-function ExpenseForm({ petId, onCreate }) {
-  const [category, setCategory] = useState("FOOD");
-  const [itemName, setItemName] = useState("");
-  const [amount, setAmount] = useState("");
+function WeightEditForm({ weight, onSave, onCancel }) {
+  const [weightKg, setWeightKg] = useState(String(weight.weightKg || ""));
+  const [measuredAt, setMeasuredAt] = useState(localDateTimeValue(weight.measuredAt));
+  const [note, setNote] = useState(weight.note || "");
   const [saving, setSaving] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
     setSaving(true);
     try {
-      await onCreate({ petId, category, itemName, amount });
-      setItemName("");
-      setAmount("");
+      await onSave({
+        id: weight.id,
+        petId: weight.petId,
+        weightKg,
+        measuredAt: new Date(measuredAt).toISOString(),
+        note
+      });
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form className="inlineForm" onSubmit={submit}>
+    <form className="ledgerForm" onSubmit={submit}>
+      <input value={weightKg} onChange={(event) => setWeightKg(event.target.value)} placeholder="体重 kg" inputMode="decimal" />
+      <input type="datetime-local" value={measuredAt} onChange={(event) => setMeasuredAt(event.target.value)} />
+      <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="备注" />
+      <div className="ledgerFormActions">
+        <button className="secondaryButton" type="button" onClick={onCancel}>
+          取消
+        </button>
+        <button className="secondaryButton" type="submit" disabled={saving}>
+          {saving ? "保存中" : "保存体重"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function WeightLedger({ weightRecords, editingWeight, onEdit, onSave, onCancel, onDelete }) {
+  return (
+    <section className="contentPanel">
+      <div className="sectionHeading">
+        <p>体重记录</p>
+        <span>可修改 / 删除已有条目</span>
+      </div>
+      {editingWeight ? (
+        <WeightEditForm key={editingWeight.id} weight={editingWeight} onSave={onSave} onCancel={onCancel} />
+      ) : (
+        <p className="mutedText ledgerHint">选择下方任意一条体重记录进行编辑。</p>
+      )}
+      <div className="ledgerList">
+        {[...weightRecords].reverse().map((weight) => (
+          <article className="ledgerItem" key={weight.id}>
+            <div>
+              <strong>{weight.weightKg} kg</strong>
+              <span>{formatDateTime(weight.measuredAt)}</span>
+              {weight.note ? <small>{weight.note}</small> : null}
+            </div>
+            <div className="ledgerActions">
+              <button className="miniActionButton" type="button" onClick={() => onEdit(weight)}>
+                <Pencil size={14} />
+                编辑
+              </button>
+              <button className="miniDangerButton" type="button" onClick={() => onDelete(weight)}>
+                <Trash2 size={15} />
+                删除
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ExpenseForm({ petId, editingExpense, onCreate, onUpdate, onCancelEdit }) {
+  const [category, setCategory] = useState(editingExpense?.category || "FOOD");
+  const [itemName, setItemName] = useState(editingExpense?.itemName || "");
+  const [amount, setAmount] = useState(editingExpense ? String(Number(editingExpense.amountCents || 0) / 100) : "");
+  const [purchasedAt, setPurchasedAt] = useState(localDateValue(editingExpense?.purchasedAt || new Date()));
+  const [note, setNote] = useState(editingExpense?.note || "");
+  const [saving, setSaving] = useState(false);
+  const isEditing = Boolean(editingExpense);
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const payload = {
+        petId,
+        category,
+        itemName,
+        amount,
+        purchasedAt: new Date(`${purchasedAt}T12:00:00`).toISOString(),
+        note
+      };
+
+      if (isEditing) {
+        await onUpdate({ id: editingExpense.id, ...payload });
+      } else {
+        await onCreate(payload);
+        setItemName("");
+        setAmount("");
+        setNote("");
+        setPurchasedAt(localDateValue());
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="ledgerForm" onSubmit={submit}>
       <select value={category} onChange={(event) => setCategory(event.target.value)}>
         {Object.entries(EXPENSE_CATEGORIES).map(([key, value]) => (
           <option key={key} value={key}>{value}</option>
@@ -319,15 +592,39 @@ function ExpenseForm({ petId, onCreate }) {
       </select>
       <input value={itemName} onChange={(event) => setItemName(event.target.value)} placeholder="物品名称" />
       <input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="金额" inputMode="decimal" />
-      <button className="secondaryButton" type="submit" disabled={saving}>
-        <CircleDollarSign size={16} />
-        {saving ? "保存中" : "记一笔"}
-      </button>
+      <input type="date" value={purchasedAt} onChange={(event) => setPurchasedAt(event.target.value)} />
+      <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="备注" />
+      <div className="ledgerFormActions">
+        {isEditing ? (
+          <button className="secondaryButton" type="button" onClick={onCancelEdit}>
+            取消
+          </button>
+        ) : null}
+        <button className="secondaryButton" type="submit" disabled={saving}>
+          <CircleDollarSign size={16} />
+          {saving ? "保存中" : isEditing ? "保存费用" : "记一笔"}
+        </button>
+      </div>
     </form>
   );
 }
 
-function InsightsView({ data, derived, onCreateExpense }) {
+function InsightsView({ data, derived, onCreateExpense, onUpdateExpense, onDeleteExpense, onUpdateWeight, onDeleteWeight }) {
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [editingWeightId, setEditingWeightId] = useState(null);
+  const editingExpense = data.expenses.find((expense) => expense.id === editingExpenseId) || null;
+  const editingWeight = derived.weightRecords.find((weight) => weight.id === editingWeightId) || null;
+
+  async function saveWeight(payload) {
+    await onUpdateWeight(payload);
+    setEditingWeightId(null);
+  }
+
+  async function updateExpense(payload) {
+    await onUpdateExpense(payload);
+    setEditingExpenseId(null);
+  }
+
   return (
     <section className="singleColumn">
       <div className="pageHeader">
@@ -340,20 +637,48 @@ function InsightsView({ data, derived, onCreateExpense }) {
         <WeightChart weightRecords={derived.weightRecords} />
         <ExpenseChart expenses={data.expenses} />
       </div>
+      <WeightLedger
+        weightRecords={derived.weightRecords}
+        editingWeight={editingWeight}
+        onEdit={(weight) => setEditingWeightId(weight.id)}
+        onSave={saveWeight}
+        onCancel={() => setEditingWeightId(null)}
+        onDelete={onDeleteWeight}
+      />
       <section className="contentPanel">
         <div className="sectionHeading">
           <p>费用记录</p>
-          <span>{formatCurrency(derived.expenseSummary.totalCents)} 累计</span>
+          <span>{formatCurrency(derived.expenseSummary.totalCents)} 累计，可修改 / 删除</span>
         </div>
-        <ExpenseForm petId={data.pet.id} onCreate={onCreateExpense} />
+        <ExpenseForm
+          key={editingExpense?.id || "new-expense"}
+          petId={data.pet.id}
+          editingExpense={editingExpense}
+          onCreate={onCreateExpense}
+          onUpdate={updateExpense}
+          onCancelEdit={() => setEditingExpenseId(null)}
+        />
         <div className="expenseList">
           {data.expenses.map((expense) => (
             <article key={expense.id}>
               <div>
                 <strong>{expense.itemName}</strong>
                 <span>{EXPENSE_CATEGORIES[expense.category] || expense.category} · {formatDate(expense.purchasedAt)}</span>
+                {expense.note ? <small>{expense.note}</small> : null}
               </div>
-              <b>{formatCurrency(expense.amountCents)}</b>
+              <div className="expenseAmountBlock">
+                <b>{formatCurrency(expense.amountCents)}</b>
+                <div className="ledgerActions">
+                  <button className="miniActionButton" type="button" onClick={() => setEditingExpenseId(expense.id)}>
+                    <Pencil size={14} />
+                    编辑
+                  </button>
+                  <button className="miniDangerButton" type="button" onClick={() => onDeleteExpense(expense)}>
+                    <Trash2 size={15} />
+                    删除
+                  </button>
+                </div>
+              </div>
             </article>
           ))}
         </div>
@@ -378,40 +703,88 @@ function InsightsView({ data, derived, onCreateExpense }) {
 }
 
 function PhotoForm({ petId, onCreate }) {
-  const [url, setUrl] = useState("/photos/westie-training.svg");
+  const cameraInputRef = useRef(null);
+  const albumInputRef = useRef(null);
+  const [url, setUrl] = useState("");
   const [caption, setCaption] = useState("");
+  const [preview, setPreview] = useState("");
   const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  async function selectFile(file) {
+    if (!file) return;
+    setProcessing(true);
+    try {
+      const dataUrl = await compressImageFile(file);
+      setUrl(dataUrl);
+      setPreview(dataUrl);
+      if (!caption) {
+        setCaption("手机拍摄记录");
+      }
+    } finally {
+      setProcessing(false);
+    }
+  }
 
   async function submit(event) {
     event.preventDefault();
+    if (!url) return;
     setSaving(true);
     try {
       await onCreate({ petId, url, caption });
       setCaption("");
+      setUrl("");
+      setPreview("");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form className="inlineForm photoAddForm" onSubmit={submit}>
-      <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="照片路径或 R2 URL" />
-      <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="照片说明" />
+    <form className="photoCaptureForm" onSubmit={submit}>
+      <input
+        ref={cameraInputRef}
+        className="hiddenFileInput"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={(event) => selectFile(event.target.files?.[0])}
+      />
+      <input
+        ref={albumInputRef}
+        className="hiddenFileInput"
+        type="file"
+        accept="image/*"
+        onChange={(event) => selectFile(event.target.files?.[0])}
+      />
+      <div className="photoPickers">
+        <button className="secondaryButton" type="button" onClick={() => cameraInputRef.current?.click()} disabled={processing}>
+          <Camera size={16} />
+          手机拍摄
+        </button>
+        <button className="secondaryButton" type="button" onClick={() => albumInputRef.current?.click()} disabled={processing}>
+          <Upload size={16} />
+          读取相册
+        </button>
+      </div>
+      {preview ? <img className="photoPreview" src={preview} alt="待保存照片预览" /> : null}
+      <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="照片说明，例如：第一次洗澡后" />
+      <input value={url} onChange={(event) => { setUrl(event.target.value); setPreview(event.target.value); }} placeholder="也可粘贴图片 URL 或未来 R2 URL" />
       <button className="secondaryButton" type="submit" disabled={saving}>
         <ImagePlus size={16} />
-        {saving ? "保存中" : "加入相册"}
+        {saving ? "保存中" : processing ? "处理中" : "加入相册"}
       </button>
     </form>
   );
 }
 
-function PhotosView({ data, onCreatePhoto }) {
+function PhotosView({ data, onCreatePhoto, onDeletePhoto }) {
   return (
     <section className="singleColumn">
       <div className="pageHeader">
         <div>
           <h2>成长相册</h2>
-          <p>第一版先保存照片路径和说明，Cloudflare 阶段会迁移到 R2 对象存储。</p>
+          <p>手机端可直接拍摄或读取相册，当前会压缩后同步到 Cloudflare D1；照片多了以后再迁到 R2。</p>
         </div>
       </div>
       <PhotoForm petId={data.pet.id} onCreate={onCreatePhoto} />
@@ -422,6 +795,10 @@ function PhotosView({ data, onCreatePhoto }) {
             <div>
               <strong>{photo.caption || "成长照片"}</strong>
               <span>{formatDate(photo.takenAt)}</span>
+              <button className="miniDangerButton" type="button" onClick={() => onDeletePhoto(photo)}>
+                <Trash2 size={15} />
+                删除照片
+              </button>
             </div>
           </article>
         ))}
@@ -525,7 +902,7 @@ function ProfileForm({ pet, onSave }) {
   );
 }
 
-function ProfileView({ data, onSaveProfile, onCreateReminder, onToggleReminder }) {
+function ProfileView({ data, onSaveProfile, onCreateReminder, onCompleteReminder, onToggleReminder, onDeleteReminder }) {
   return (
     <section className="singleColumn">
       <div className="pageHeader">
@@ -544,10 +921,15 @@ function ProfileView({ data, onSaveProfile, onCreateReminder, onToggleReminder }
       <section className="contentPanel">
         <div className="sectionHeading">
           <p>提醒计划</p>
-          <span>喂食、如厕、疫苗、驱虫</span>
+          <span>可完成、暂停、删除，会同步到 D1</span>
         </div>
         <ReminderForm petId={data.pet.id} onCreate={onCreateReminder} />
-        <ReminderList reminders={data.reminders} onToggle={onToggleReminder} />
+        <ReminderList
+          reminders={data.reminders}
+          onComplete={onCompleteReminder}
+          onToggle={onToggleReminder}
+          onDelete={onDeleteReminder}
+        />
       </section>
       <section className="syncPanel">
         <div>
@@ -579,7 +961,7 @@ export default function PetDailyApp({ initialData }) {
       body: JSON.stringify(payload)
     });
     if (!response.ok) throw new Error("Failed to create timeline event");
-    const { event } = await response.json();
+    const { event, weightRecord, photoAsset } = await response.json();
 
     setData((current) => {
       const next = {
@@ -587,7 +969,7 @@ export default function PetDailyApp({ initialData }) {
         timelineEvents: [event, ...current.timelineEvents]
       };
       if (payload.type === "WEIGHT" && payload.amount) {
-        const weightRecord = {
+        const nextWeightRecord = weightRecord || {
           id: `local-${event.id}`,
           petId: payload.petId,
           measuredAt: event.happenedAt,
@@ -595,23 +977,61 @@ export default function PetDailyApp({ initialData }) {
           note: payload.note,
           createdAt: event.createdAt
         };
-        next.weightRecords = [...current.weightRecords, weightRecord];
+        next.weightRecords = sortWeightRecords([...current.weightRecords, nextWeightRecord]);
         next.pet = { ...current.pet, currentWeight: Number(payload.amount) };
       }
-      if (payload.type === "PHOTO" && payload.photoUrl) {
-        next.photos = [
-          {
+      if (payload.photoUrl) {
+        const nextPhoto = photoAsset || {
             id: `local-photo-${event.id}`,
             petId: payload.petId,
             url: payload.photoUrl,
             caption: payload.title,
             takenAt: event.happenedAt,
+            linkedEventId: event.id,
             createdAt: event.createdAt
-          },
-          ...current.photos
-        ];
+          };
+        next.photos = [nextPhoto, ...current.photos];
       }
       return next;
+    });
+    router.refresh();
+  }
+
+  async function deleteTimeline(event) {
+    const ok = window.confirm(`删除「${event.title}」这条记录吗？`);
+    if (!ok) return;
+
+    const response = await fetch(`/api/timeline?id=${encodeURIComponent(event.id)}`, {
+      method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to delete timeline event");
+
+    setData((current) => {
+      const nextTimeline = current.timelineEvents.filter((item) => item.id !== event.id);
+      const nextPhotos = current.photos.filter((photo) => photo.linkedEventId !== event.id);
+      let nextWeightRecords = current.weightRecords;
+      let nextPet = current.pet;
+
+      if (event.type === "WEIGHT") {
+        nextWeightRecords = current.weightRecords.filter(
+          (item) =>
+            !(
+              item.petId === event.petId &&
+              item.measuredAt === event.happenedAt &&
+              Number(item.weightKg) === Number(event.amount)
+            )
+        );
+        const latest = [...nextWeightRecords].sort((a, b) => new Date(a.measuredAt) - new Date(b.measuredAt)).at(-1);
+        nextPet = { ...current.pet, currentWeight: latest?.weightKg ?? null };
+      }
+
+      return {
+        ...current,
+        pet: nextPet,
+        timelineEvents: nextTimeline,
+        photos: nextPhotos,
+        weightRecords: nextWeightRecords
+      };
     });
     router.refresh();
   }
@@ -624,7 +1044,76 @@ export default function PetDailyApp({ initialData }) {
     });
     if (!response.ok) throw new Error("Failed to create expense");
     const { expense } = await response.json();
-    setData((current) => ({ ...current, expenses: [expense, ...current.expenses] }));
+    setData((current) => ({ ...current, expenses: sortExpenses([expense, ...current.expenses]) }));
+    router.refresh();
+  }
+
+  async function updateExpense(payload) {
+    const response = await fetch("/api/expenses", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error("Failed to update expense");
+    const { expense } = await response.json();
+    setData((current) => ({
+      ...current,
+      expenses: sortExpenses(current.expenses.map((item) => (item.id === expense.id ? expense : item)))
+    }));
+    router.refresh();
+  }
+
+  async function deleteExpenseItem(expense) {
+    const ok = window.confirm(`删除费用「${expense.itemName}」吗？`);
+    if (!ok) return;
+
+    const response = await fetch(`/api/expenses?id=${encodeURIComponent(expense.id)}`, {
+      method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to delete expense");
+    setData((current) => ({
+      ...current,
+      expenses: current.expenses.filter((item) => item.id !== expense.id)
+    }));
+    router.refresh();
+  }
+
+  async function updateWeight(payload) {
+    const response = await fetch("/api/weights", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error("Failed to update weight");
+    const { weight, timelineEvent, currentWeightKg } = await response.json();
+    setData((current) => ({
+      ...current,
+      pet: { ...current.pet, currentWeight: currentWeightKg },
+      weightRecords: sortWeightRecords(current.weightRecords.map((item) => (item.id === weight.id ? weight : item))),
+      timelineEvents: timelineEvent
+        ? current.timelineEvents.map((item) => (item.id === timelineEvent.id ? timelineEvent : item))
+        : current.timelineEvents
+    }));
+    router.refresh();
+  }
+
+  async function deleteWeightItem(weight) {
+    const ok = window.confirm(`删除 ${formatDateTime(weight.measuredAt)} 的体重记录吗？`);
+    if (!ok) return;
+
+    const response = await fetch(`/api/weights?id=${encodeURIComponent(weight.id)}`, {
+      method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to delete weight");
+    const { result } = await response.json();
+    const deletedTimelineIds = new Set(result.timelineEventIds || []);
+
+    setData((current) => ({
+      ...current,
+      pet: { ...current.pet, currentWeight: result.currentWeightKg },
+      weightRecords: current.weightRecords.filter((item) => item.id !== weight.id),
+      timelineEvents: current.timelineEvents.filter((item) => !deletedTimelineIds.has(item.id))
+    }));
     router.refresh();
   }
 
@@ -637,6 +1126,26 @@ export default function PetDailyApp({ initialData }) {
     if (!response.ok) throw new Error("Failed to create photo");
     const { photo } = await response.json();
     setData((current) => ({ ...current, photos: [photo, ...current.photos] }));
+    router.refresh();
+  }
+
+  async function deletePhoto(photo) {
+    const ok = window.confirm(`删除「${photo.caption || "成长照片"}」吗？`);
+    if (!ok) return;
+
+    const response = await fetch(`/api/photos?id=${encodeURIComponent(photo.id)}`, {
+      method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to delete photo");
+    const { result } = await response.json();
+
+    setData((current) => ({
+      ...current,
+      photos: current.photos.filter((item) => item.id !== photo.id),
+      timelineEvents: result.linkedEventId
+        ? current.timelineEvents.filter((item) => item.id !== result.linkedEventId)
+        : current.timelineEvents
+    }));
     router.refresh();
   }
 
@@ -663,6 +1172,41 @@ export default function PetDailyApp({ initialData }) {
     setData((current) => ({
       ...current,
       reminders: current.reminders.map((item) => (item.id === updated.id ? updated : item))
+    }));
+    router.refresh();
+  }
+
+  async function completeReminder(reminder) {
+    const status = getReminderStatus(reminder);
+    const response = await fetch("/api/reminders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: reminder.id,
+        complete: status.key !== "done",
+        resetDone: status.key === "done"
+      })
+    });
+    if (!response.ok) throw new Error("Failed to complete reminder");
+    const { reminder: updated } = await response.json();
+    setData((current) => ({
+      ...current,
+      reminders: current.reminders.map((item) => (item.id === updated.id ? updated : item))
+    }));
+    router.refresh();
+  }
+
+  async function deleteReminderItem(reminder) {
+    const ok = window.confirm(`删除提醒「${reminder.title}」吗？`);
+    if (!ok) return;
+
+    const response = await fetch(`/api/reminders?id=${encodeURIComponent(reminder.id)}`, {
+      method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to delete reminder");
+    setData((current) => ({
+      ...current,
+      reminders: current.reminders.filter((item) => item.id !== reminder.id)
     }));
     router.refresh();
   }
@@ -723,24 +1267,36 @@ export default function PetDailyApp({ initialData }) {
             onOpenRecord={() => setSheetOpen(true)}
             onGenerateInsight={generateInsight}
             aiLoading={aiLoading}
+            onCompleteReminder={completeReminder}
             onToggleReminder={toggleReminder}
+            onDeleteEvent={deleteTimeline}
           />
         ) : null}
         {activeTab === "record" ? (
-          <RecordView events={derived.timelineEvents} onOpenRecord={() => setSheetOpen(true)} />
+          <RecordView events={derived.timelineEvents} onOpenRecord={() => setSheetOpen(true)} onDeleteEvent={deleteTimeline} />
         ) : null}
         {activeTab === "insights" ? (
-          <InsightsView data={data} derived={derived} onCreateExpense={createExpense} />
+          <InsightsView
+            data={data}
+            derived={derived}
+            onCreateExpense={createExpense}
+            onUpdateExpense={updateExpense}
+            onDeleteExpense={deleteExpenseItem}
+            onUpdateWeight={updateWeight}
+            onDeleteWeight={deleteWeightItem}
+          />
         ) : null}
         {activeTab === "photos" ? (
-          <PhotosView data={data} onCreatePhoto={createPhoto} />
+          <PhotosView data={data} onCreatePhoto={createPhoto} onDeletePhoto={deletePhoto} />
         ) : null}
         {activeTab === "profile" ? (
           <ProfileView
             data={data}
             onSaveProfile={saveProfile}
             onCreateReminder={createReminder}
+            onCompleteReminder={completeReminder}
             onToggleReminder={toggleReminder}
+            onDeleteReminder={deleteReminderItem}
           />
         ) : null}
       </main>

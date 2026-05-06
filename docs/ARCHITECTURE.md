@@ -4,7 +4,9 @@
 
 - Next.js App Router：页面、API Routes 和服务端数据读取。
 - React Client Components：移动端工作台、表单、弹层、图表交互。
-- Prisma + SQLite：本地 MVP 数据库。
+- Prisma + SQLite：本地开发数据库。
+- Cloudflare Workers + D1：手机端线上使用的远程数据库运行时。
+- OpenNext for Cloudflare：将 Next.js 应用构建为 Cloudflare Worker。
 - Recharts：体重曲线和费用图表。
 - lucide-react：按钮和导航图标。
 
@@ -22,12 +24,17 @@ components/
   charts-panel.jsx
 lib/
   ai-coach.js          AI / mock fallback
+  cloudflare.js        Cloudflare runtime binding 读取
   domain.js            业务字典和格式化工具
+  pet-store.js         D1 / SQLite 双运行时数据访问层
   prisma.js            Prisma client
   server-data.js       首页聚合数据
+migrations/            Cloudflare D1 schema migration
 prisma/
   schema.prisma
   seed.js
+cloudflare/
+  seed.sql             远程 D1 demo seed
 public/photos/         demo 照片占位资源
 docs/
 ```
@@ -45,10 +52,10 @@ docs/
 ## 4. API
 
 - `GET/POST /api/pets`
-- `GET/POST /api/timeline`
-- `GET/POST/PATCH /api/reminders`
+- `GET/POST/DELETE /api/timeline`
+- `GET/POST/PATCH/DELETE /api/reminders`
 - `GET/POST /api/expenses`
-- `GET/POST /api/photos`
+- `GET/POST/DELETE /api/photos`
 - `GET /api/insights`
 - `POST /api/ai/coach`
 
@@ -60,9 +67,10 @@ docs/
 - 已配置 `OPENAI_API_KEY`：服务端调用在线模型，前端不接触密钥。
 - 异常或网络失败：自动回退本地规则建议。
 
-## 6. Cloudflare 迁移预留
+## 6. Cloudflare D1 运行方式
 
-- SQLite 表结构以 D1 易迁移的关系模型组织。
-- 图片第一版只保存路径/URL；后续可将文件上传到 R2，再保存 R2 URL。
-- API 路由保持资源化，后续可迁移到 Workers 或保留 Next 服务端适配层。
-- 前端可部署到 Cloudflare Pages，结构化数据和对象存储分离。
+- 本地 `npm run dev` 默认使用 Prisma + SQLite，数据库文件为 `data/petdaily.db`。
+- Cloudflare 部署后由 OpenNext Worker 运行 Next.js，代码通过 `DB` binding 访问 D1。
+- `lib/pet-store.js` 是唯一数据访问层；API 和首页不直接依赖 Prisma。
+- D1 schema 位于 `migrations/0001_petdaily_schema.sql`，远程 seed 位于 `cloudflare/seed.sql`。
+- 图片当前在浏览器端压缩为 Data URL 后写入 D1，适合少量个人记录；下一步可以把上传文件接入 R2，再保存 R2 URL。

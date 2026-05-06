@@ -1,24 +1,22 @@
 import { NextResponse } from "next/server";
-import { createTimelineEvent, deleteTimelineEvent, listTimelineEvents } from "@/lib/pet-store";
+import { deleteWeightRecord, listWeightRecords, updateWeightRecord } from "@/lib/pet-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const petId = searchParams.get("petId");
-
-  const timelineEvents = await listTimelineEvents(petId);
-  return NextResponse.json({ timelineEvents });
+  const weightRecords = await listWeightRecords(petId);
+  return NextResponse.json({ weightRecords });
 }
 
-export async function POST(request) {
+export async function PATCH(request) {
   const body = await request.json();
-
-  if (!body.petId) {
-    return NextResponse.json({ message: "petId is required" }, { status: 400 });
+  if (!body.id) {
+    return NextResponse.json({ message: "id is required" }, { status: 400 });
   }
 
-  const result = await createTimelineEvent(body);
+  const result = await updateWeightRecord(body);
   return NextResponse.json(result);
 }
 
@@ -30,6 +28,6 @@ export async function DELETE(request) {
     return NextResponse.json({ message: "id is required" }, { status: 400 });
   }
 
-  const result = await deleteTimelineEvent(id);
+  const result = await deleteWeightRecord(id);
   return NextResponse.json({ result });
 }
