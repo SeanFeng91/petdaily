@@ -1,0 +1,341 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - strong [ref=e10]: PetDaily
+      - navigation [ref=e11]:
+        - button "时间轴" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e16]: 时间轴
+        - button "记录" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e20]: 记录
+        - button "监听" [ref=e21] [cursor=pointer]:
+          - img [ref=e22]
+          - generic [ref=e24]: 监听
+        - button "洞察" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+          - generic [ref=e29]: 洞察
+        - button "相册" [ref=e30] [cursor=pointer]:
+          - img [ref=e31]
+          - generic [ref=e34]: 相册
+        - button "我的" [ref=e35] [cursor=pointer]:
+          - img [ref=e36]
+          - generic [ref=e39]: 我的
+    - main [ref=e40]:
+      - generic [ref=e41]:
+        - heading "白板日记" [level=1] [ref=e44]
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - paragraph [ref=e48]: 快捷事件
+              - text: 数字键 1-6 可直接触发
+            - button "配置快捷事件" [ref=e49] [cursor=pointer]:
+              - img [ref=e50]
+              - generic [ref=e53]: 配置
+          - generic [ref=e54]:
+            - button "1 早餐 45g" [ref=e55] [cursor=pointer]:
+              - generic [ref=e56]: "1"
+              - strong [ref=e57]: 早餐
+              - generic [ref=e58]: 45g
+            - button "2 晚餐 45g" [ref=e59] [cursor=pointer]:
+              - generic [ref=e60]: "2"
+              - strong [ref=e61]: 晚餐
+              - generic [ref=e62]: 45g
+            - button "3 尿尿 1次" [ref=e63] [cursor=pointer]:
+              - generic [ref=e64]: "3"
+              - strong [ref=e65]: 尿尿
+              - generic [ref=e66]: 1次
+            - button "4 便便 1次" [ref=e67] [cursor=pointer]:
+              - generic [ref=e68]: "4"
+              - strong [ref=e69]: 便便
+              - generic [ref=e70]: 1次
+            - button "5 称重" [ref=e71] [cursor=pointer]:
+              - generic [ref=e72]: "5"
+              - strong [ref=e73]: 称重
+            - button "6 训练" [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]: "6"
+              - strong [ref=e76]: 训练
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - generic [ref=e80]:
+                - paragraph [ref=e81]: 事件流
+                - generic [ref=e82]: 14 条记录
+              - generic "时间轴筛选" [ref=e83]:
+                - button "全部" [ref=e84] [cursor=pointer]
+                - button "饮食" [ref=e85] [cursor=pointer]
+                - button "如厕" [ref=e86] [cursor=pointer]
+                - button "排便" [ref=e87] [cursor=pointer]
+                - button "体重" [ref=e88] [cursor=pointer]
+                - button "疫苗" [ref=e89] [cursor=pointer]
+                - button "驱虫" [ref=e90] [cursor=pointer]
+                - button "照片" [ref=e91] [cursor=pointer]
+                - button "狗叫" [ref=e92] [cursor=pointer]
+                - button "备注" [ref=e93] [cursor=pointer]
+            - generic [ref=e94]:
+              - generic [ref=e95]:
+                - generic [ref=e96]:
+                  - strong [ref=e97]: 05/05
+                  - generic [ref=e98]: 周二
+                - generic [ref=e99]:
+                  - article [ref=e100]:
+                    - generic [ref=e101]: 18:30
+                    - generic [ref=e103]:
+                      - generic [ref=e104]:
+                        - generic [ref=e105]:
+                          - img [ref=e106]
+                          - text: 饮食
+                        - strong [ref=e109]: 晚餐完成
+                        - generic [ref=e110]: 45g
+                        - button "删除" [ref=e111] [cursor=pointer]:
+                          - img [ref=e112]
+                          - text: 删除
+                      - paragraph [ref=e115]: 饭后 20 分钟外出。
+                  - article [ref=e116]:
+                    - generic [ref=e117]: 10:18
+                    - generic [ref=e119]:
+                      - generic [ref=e120]:
+                        - generic [ref=e121]:
+                          - img [ref=e122]
+                          - text: 排便
+                        - strong [ref=e127]: 上午便便
+                        - generic [ref=e128]: 1次
+                        - button "删除" [ref=e129] [cursor=pointer]:
+                          - img [ref=e130]
+                          - text: 删除
+                      - paragraph [ref=e133]: 状态正常。
+                  - article [ref=e134]:
+                    - generic [ref=e135]: 09:20
+                    - generic [ref=e137]:
+                      - generic [ref=e138]:
+                        - generic [ref=e139]:
+                          - img [ref=e140]
+                          - text: 照片
+                        - strong [ref=e143]: 第一次认真看镜头
+                        - button "删除" [ref=e144] [cursor=pointer]:
+                          - img [ref=e145]
+                          - text: 删除
+                      - paragraph [ref=e148]: 耳朵还没完全立稳。
+                      - img "第一次认真看镜头" [ref=e149]
+                  - article [ref=e150]:
+                    - generic [ref=e151]: 08:09
+                    - generic [ref=e153]:
+                      - generic [ref=e154]:
+                        - generic [ref=e155]:
+                          - img [ref=e156]
+                          - text: 如厕
+                        - strong [ref=e161]: 饭后尿尿
+                        - generic [ref=e162]: 1次
+                        - button "删除" [ref=e163] [cursor=pointer]:
+                          - img [ref=e164]
+                          - text: 删除
+                      - paragraph [ref=e167]: 比昨天更快进入状态。
+                  - article [ref=e168]:
+                    - generic [ref=e169]: 07:35
+                    - generic [ref=e171]:
+                      - generic [ref=e172]:
+                        - generic [ref=e173]:
+                          - img [ref=e174]
+                          - text: 饮食
+                        - strong [ref=e177]: 早餐完成
+                        - generic [ref=e178]: 44g
+                        - button "删除" [ref=e179] [cursor=pointer]:
+                          - img [ref=e180]
+                          - text: 删除
+                      - paragraph [ref=e183]: 精神好，未挑食。
+              - generic [ref=e184]:
+                - generic [ref=e185]:
+                  - strong [ref=e186]: 05/04
+                  - generic [ref=e187]: 周一
+                - generic [ref=e188]:
+                  - article [ref=e189]:
+                    - generic [ref=e190]: 22:08
+                    - generic [ref=e192]:
+                      - generic [ref=e193]:
+                        - generic [ref=e194]:
+                          - img [ref=e195]
+                          - text: 如厕
+                        - strong [ref=e200]: 睡前尿尿
+                        - generic [ref=e201]: 1次
+                        - button "删除" [ref=e202] [cursor=pointer]:
+                          - img [ref=e203]
+                          - text: 删除
+                      - paragraph [ref=e206]: 固定口令有效。
+                  - article [ref=e207]:
+                    - generic [ref=e208]: 18:35
+                    - generic [ref=e210]:
+                      - generic [ref=e211]:
+                        - generic [ref=e212]:
+                          - img [ref=e213]
+                          - text: 饮食
+                        - strong [ref=e216]: 晚餐完成
+                        - generic [ref=e217]: 45g
+                        - button "删除" [ref=e218] [cursor=pointer]:
+                          - img [ref=e219]
+                          - text: 删除
+                      - paragraph [ref=e222]: 食欲稳定。
+                  - article [ref=e223]:
+                    - generic [ref=e224]: 14:20
+                    - generic [ref=e226]:
+                      - generic [ref=e227]:
+                        - generic [ref=e228]:
+                          - img [ref=e229]
+                          - text: 备注
+                        - strong [ref=e231]: 笼内安静训练
+                        - button "删除" [ref=e232] [cursor=pointer]:
+                          - img [ref=e233]
+                          - text: 删除
+                      - paragraph [ref=e236]: 午睡前哼叫 2 分钟后安静。
+                  - article [ref=e237]:
+                    - generic [ref=e238]: 08:32
+                    - generic [ref=e240]:
+                      - generic [ref=e241]:
+                        - generic [ref=e242]:
+                          - img [ref=e243]
+                          - text: 排便
+                        - strong [ref=e248]: 便便成型
+                        - generic [ref=e249]: 1次
+                        - button "删除" [ref=e250] [cursor=pointer]:
+                          - img [ref=e251]
+                          - text: 删除
+                      - paragraph [ref=e254]: 颜色正常，形态偏软但成型。
+                  - article [ref=e255]:
+                    - generic [ref=e256]: 08:18
+                    - generic [ref=e258]:
+                      - generic [ref=e259]:
+                        - generic [ref=e260]:
+                          - img [ref=e261]
+                          - text: 如厕
+                        - strong [ref=e266]: 饭后尿尿
+                        - generic [ref=e267]: 1次
+                        - button "删除" [ref=e268] [cursor=pointer]:
+                          - img [ref=e269]
+                          - text: 删除
+                      - paragraph [ref=e272]: 在楼下草地完成，奖励及时。
+                  - article [ref=e273]:
+                    - generic [ref=e274]: 07:38
+                    - generic [ref=e276]:
+                      - generic [ref=e277]:
+                        - generic [ref=e278]:
+                          - img [ref=e279]
+                          - text: 饮食
+                        - strong [ref=e282]: 早餐完成
+                        - generic [ref=e283]: 45g
+                        - button "删除" [ref=e284] [cursor=pointer]:
+                          - img [ref=e285]
+                          - text: 删除
+                      - paragraph [ref=e288]: 幼犬粮泡软，5 分钟吃完。
+              - generic [ref=e289]:
+                - generic [ref=e290]:
+                  - strong [ref=e291]: 05/03
+                  - generic [ref=e292]: 周日
+                - article [ref=e294]:
+                  - generic [ref=e295]: 08:10
+                  - generic [ref=e297]:
+                    - generic [ref=e298]:
+                      - generic [ref=e299]:
+                        - img [ref=e300]
+                        - text: 体重
+                      - strong [ref=e303]: 早餐前称重
+                      - generic [ref=e304]: 3.2kg
+                      - button "删除" [ref=e305] [cursor=pointer]:
+                        - img [ref=e306]
+                        - text: 删除
+                    - paragraph [ref=e309]: 保持同一电子秤。
+              - generic [ref=e310]:
+                - generic [ref=e311]:
+                  - strong [ref=e312]: 05/02
+                  - generic [ref=e313]: 周六
+                - article [ref=e315]:
+                  - generic [ref=e316]: 09:15
+                  - generic [ref=e318]:
+                    - generic [ref=e319]:
+                      - generic [ref=e320]:
+                        - img [ref=e321]
+                        - text: 驱虫
+                      - strong [ref=e324]: 体外驱虫观察
+                      - button "删除" [ref=e325] [cursor=pointer]:
+                        - img [ref=e326]
+                        - text: 删除
+                    - paragraph [ref=e329]: 滴剂后 48 小时内避免洗澡。
+              - generic [ref=e330]:
+                - generic [ref=e331]:
+                  - strong [ref=e332]: 05/01
+                  - generic [ref=e333]: 周五
+                - article [ref=e335]:
+                  - generic [ref=e336]: 16:00
+                  - generic [ref=e338]:
+                    - generic [ref=e339]:
+                      - generic [ref=e340]:
+                        - img [ref=e341]
+                        - text: 疫苗
+                      - strong [ref=e348]: 疫苗记录复核
+                      - button "删除" [ref=e349] [cursor=pointer]:
+                        - img [ref=e350]
+                        - text: 删除
+                    - paragraph [ref=e353]: 已记录下一次加强针时间，实际以宠物医院为准。
+          - complementary [ref=e354]:
+            - generic [ref=e355]:
+              - generic [ref=e356]:
+                - paragraph [ref=e357]: 待办提醒
+                - generic [ref=e358]: 今日
+              - generic [ref=e359]:
+                - article [ref=e360]:
+                  - generic [ref=e361]:
+                    - strong [ref=e362]: 07:30
+                    - text: 喂食
+                  - paragraph [ref=e363]: 早餐 45g 幼犬粮
+                  - generic [ref=e364]:
+                    - img [ref=e365]
+                    - text: 已到点
+                  - generic [ref=e368]:
+                    - button "完成提醒" [ref=e369] [cursor=pointer]:
+                      - img [ref=e370]
+                    - button "暂停提醒" [ref=e372] [cursor=pointer]:
+                      - img [ref=e373]
+                - article [ref=e375]:
+                  - generic [ref=e376]:
+                    - strong [ref=e377]: 08:05
+                    - text: 外出如厕
+                  - paragraph [ref=e378]: 早餐后外出如厕
+                  - generic [ref=e379]:
+                    - img [ref=e380]
+                    - text: 已到点
+                  - generic [ref=e383]:
+                    - button "完成提醒" [ref=e384] [cursor=pointer]:
+                      - img [ref=e385]
+                    - button "暂停提醒" [ref=e387] [cursor=pointer]:
+                      - img [ref=e388]
+                - article [ref=e390]:
+                  - generic [ref=e391]:
+                    - strong [ref=e392]: 09:00
+                    - text: 驱虫
+                  - paragraph [ref=e393]: 下一次体内外驱虫
+                  - generic [ref=e394]:
+                    - img [ref=e395]
+                    - text: 已到点
+                  - generic [ref=e398]:
+                    - button "完成提醒" [ref=e399] [cursor=pointer]:
+                      - img [ref=e400]
+                    - button "暂停提醒" [ref=e402] [cursor=pointer]:
+                      - img [ref=e403]
+            - generic [ref=e405]:
+              - generic [ref=e406]:
+                - img [ref=e408]
+                - generic [ref=e410]:
+                  - paragraph [ref=e411]: 豆包今日养育简报
+                  - text: AI 教练基于最近记录给出保守建议
+              - generic [ref=e412]:
+                - paragraph [ref=e413]: 做得好的地方：最近体重记录为 3.2kg，建议每周固定时间称重。
+                - paragraph [ref=e414]: 下一步建议：今天饮食记录偏少，建议补齐早中晚喂食量，方便观察食欲。 幼犬膀胱控制还在发育，醒后、饭后、玩耍后都可以安排一次如厕。
+                - paragraph [ref=e415]: 健康相关判断不能替代兽医诊断；若持续呕吐、腹泻、精神差或拒食，请及时联系兽医。
+                - paragraph
+                - paragraph [ref=e416]: 当前使用本地规则生成；配置 OPENAI_API_KEY 后会启用在线 AI 教练。
+              - button "生成今日建议" [ref=e417] [cursor=pointer]:
+                - img [ref=e418]
+                - text: 生成今日建议
+    - button "新增事件" [ref=e423] [cursor=pointer]:
+      - img [ref=e424]
+  - alert [ref=e425]

@@ -61,10 +61,17 @@ const diffArgs = existsSync(dbPath)
 
 const sql = run(prismaBin, diffArgs);
 
+function generatePrismaClient() {
+  run(prismaBin, ["generate", "--schema", schemaPath]);
+  console.log("Generated Prisma Client for the current schema.");
+}
+
 if (!sql.trim() || sql.includes("This is an empty migration")) {
   console.log("Database schema is already up to date.");
+  generatePrismaClient();
   process.exit(0);
 }
 
 run("sqlite3", [dbPath], { input: sql });
 console.log(`Applied schema to ${dbPath}`);
+generatePrismaClient();

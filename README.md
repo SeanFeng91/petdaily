@@ -31,9 +31,15 @@ npm run dev
 
 ## 手机端使用
 
-- 删除模拟记录：进入「记录」，每条时间日记右侧都有「删除」按钮。删除照片类型记录时，会同步移除相册中对应照片。
-- 手机拍照/相册：进入「相册」，点击「手机拍摄」可调用相机，点击「读取相册」可选择已有照片。照片会先在浏览器端压缩，再同步到 Cloudflare D1。
-- 提醒事项：进入「我的」新增提醒；每条提醒可点勾号完成今天、暂停/启用，或直接删除。首页会按时间显示“已到点 / 稍后 / 今日已完成 / 已暂停”。
+- 首页是「白板日记」：打开后先看到小型快捷事件和连续时间轴，不再把头像、统计卡或大号新增按钮放在首屏。
+- 快捷事件：首页可一键记录早餐、晚餐、如厕、排便、称重、训练等常用事件；桌面键盘支持数字键 `1-9` 触发。进入「我的」可以配置快捷按钮名称、类型、默认数值和备注。
+- 新增记录支持图片：点击悬浮 `+` 后可以拍照、读取相册或粘贴图片 URL；带图片的事件直接沉淀在时间轴里，点缩略图可全屏浏览。
+- 体重/费用维护：进入「洞察」，已有体重和费用都可以修改或删除。
+- 删除模拟记录：在首页时间轴里直接删除记录。删除带照片的记录时，会同步移除关联照片资产。
+- 提醒事项：进入「我的」新增提醒；每条提醒可点勾号完成今天、暂停/启用，或直接删除。首页只显示紧凑的今日提醒摘要。
+- iPhone 沉浸式使用：用 Safari 打开部署地址，分享按钮选择「添加到主屏幕」。本项目已提供 `manifest.webmanifest`、主题色和 Apple Web App 元信息，从桌面图标进入时会尽量以独立 Web App 形式打开。
+- 微信内使用建议：普通网页仍会保留微信浏览器顶部容器；如果后续要彻底沉浸式和订阅消息，建议单独做微信小程序壳，并配置正式业务域名，不建议把 `workers.dev` 当最终微信入口域名。
+- 狗叫声检测：进入「监听」页后可在手机不锁屏、应用前台运行时分析环境音；疑似狗叫会保存为候选短音频、自动写入时间线，并进入声音库按 embedding 聚类。主人可以给一组相似声音批量标注，当前不保存全天录音；锁屏后台长期监听需要原生 App 或固定采集设备。
 
 ## Cloudflare D1 上线
 
@@ -72,6 +78,45 @@ npm run cf:deploy
 ```
 
 部署后手机端直接打开 Cloudflare 返回的 URL，就会读写远程 D1。线上运行时使用 `DB` 这个 D1 binding；本地普通 `npm run dev` 仍然使用 SQLite。
+
+狗叫音频片段线上使用 `BARK_AUDIO` 这个 R2 binding，默认 bucket 名称为 `petdaily-bark-audio`。若 bucket 尚未创建，先运行 `wrangler r2 bucket create petdaily-bark-audio`，再部署。
+
+狗叫监听会把连续触发合并为 `BarkSession` 叫声段，并把短片段音频保存到 R2、声学特征和聚类索引保存到 D1。上线前请确保已应用 `migrations/0005_bark_sessions.sql` 和 `migrations/0006_bark_model_artifacts.sql`。
+
+如果部署时报 `assets-upload-session` / `code: 10013`，先刷新本机 Wrangler OAuth 权限：
+
+```bash
+nvm use
+npx wrangler login
+npx wrangler whoami
+npm run cf:deploy
+```
+
+`whoami` 不应再提示缺少 `artifacts:write`；否则静态资产上传会话可能继续失败。
+
+## 狗叫模型训练数据同步
+
+远程 D1/R2 中的声音数据可以下载到本地训练目录：
+
+```bash
+nvm use
+npm run bark:model:download
+```
+
+下载结果会写入 `data/bark-sync/`，其中 `samples.json`、`sessions.json`、`clusters.json` 是训练元数据，音频片段会进入 `data/bark-sync/audio/`，下载状态在 `audio-manifest.json`。
+
+训练并推回远程 D1：
+
+```bash
+npm run bark:model:train
+npm run bark:model:push
+```
+
+一键完成下载、训练、推送：
+
+```bash
+npm run bark:model:sync
+```
 
 ## AI 能力
 

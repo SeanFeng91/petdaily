@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { Button, Popup, Selector } from "antd-mobile";
 import { Camera, ImagePlus, Scale, Trash2, Upload, Utensils, X } from "lucide-react";
 import { compressImageFile } from "@/components/image-file";
 import { EVENT_TYPES } from "@/lib/domain";
@@ -89,7 +90,14 @@ export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
   }
 
   return (
-    <div className="sheetBackdrop" role="presentation">
+    <Popup
+      visible={open}
+      onMaskClick={onClose}
+      onClose={onClose}
+      position="bottom"
+      closeOnSwipe
+      bodyClassName="quickSheetPopup"
+    >
       <section className="quickSheet" aria-label="快速记录">
         <div className="sheetHeader">
           <div>
@@ -124,19 +132,22 @@ export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
             }}
           />
 
-          <div className="typeGrid">
-            {quickTypes.map(({ type: itemType, icon: Icon }) => (
-              <button
-                className={`typeButton ${type === itemType ? "selected" : ""}`}
-                key={itemType}
-                type="button"
-                onClick={() => setType(itemType)}
-              >
-                <Icon size={17} />
-                <span>{EVENT_TYPES[itemType].label}</span>
-              </button>
-            ))}
-          </div>
+          <Selector
+            className="quickTypeSelector"
+            value={[type]}
+            columns={4}
+            showCheckMark={false}
+            onChange={(value) => value[0] && setType(value[0])}
+            options={quickTypes.map(({ type: itemType, icon: Icon }) => ({
+              value: itemType,
+              label: (
+                <span className="quickTypeOption">
+                  <Icon size={16} />
+                  {EVENT_TYPES[itemType].label}
+                </span>
+              )
+            }))}
+          />
 
           <label>
             标题
@@ -212,11 +223,11 @@ export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
             <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="例如：饭后 20 分钟完成尿尿，奖励及时。" />
           </label>
 
-          <button className="primaryButton full" type="submit" disabled={saving}>
+          <Button className="quickSubmitButton" color="primary" block type="submit" loading={saving}>
             {saving ? "保存中..." : "保存记录"}
-          </button>
+          </Button>
         </form>
       </section>
-    </div>
+    </Popup>
   );
 }

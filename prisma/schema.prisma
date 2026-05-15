@@ -24,6 +24,10 @@ model PetProfile {
   expenses       Expense[]
   photos         PhotoAsset[]
   insights       AiInsight[]
+  barkSamples    BarkSample[]
+  barkClusters   BarkCluster[]
+  barkSessions   BarkSession[]
+  barkModels      BarkModelArtifact[]
 }
 
 model TimelineEvent {
@@ -44,6 +48,91 @@ model TimelineEvent {
   @@index([type])
 }
 
+model BarkCluster {
+  id          String       @id @default(cuid())
+  petId       String
+  label       String?
+  reason      String?
+  status      String       @default("unlabeled")
+  sampleCount Int          @default(0)
+  centroid    String       @default("[]")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  pet         PetProfile   @relation(fields: [petId], references: [id], onDelete: Cascade)
+  samples     BarkSample[]
+
+  @@index([petId, status])
+}
+
+model BarkSession {
+  id                     String       @id @default(cuid())
+  petId                  String
+  timelineEventId         String?
+  representativeSampleId  String?
+  startedAt              DateTime
+  endedAt                DateTime
+  sampleCount            Int          @default(0)
+  barkCount              Int          @default(0)
+  status                 String       @default("candidate")
+  reason                 String?
+  summary                String       @default("{}")
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  pet                    PetProfile   @relation(fields: [petId], references: [id], onDelete: Cascade)
+  samples                BarkSample[]
+
+  @@index([petId, startedAt])
+  @@index([status])
+}
+
+model BarkSample {
+  id               String       @id @default(cuid())
+  petId            String
+  clusterId        String?
+  sessionId        String?
+  timelineEventId  String?
+  audioUrl         String?
+  audioObjectKey   String?
+  audioContentType String?
+  audioSizeBytes   Int?
+  features         String       @default("{}")
+  embedding        String       @default("[]")
+  waveform         String       @default("[]")
+  barkScore        Float        @default(0)
+  detectorVersion  String
+  status           String       @default("candidate")
+  reason           String?
+  note             String?
+  capturedAt       DateTime
+  durationMs       Int?
+  createdAt        DateTime     @default(now())
+  pet              PetProfile   @relation(fields: [petId], references: [id], onDelete: Cascade)
+  cluster          BarkCluster? @relation(fields: [clusterId], references: [id], onDelete: SetNull)
+  session          BarkSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([petId, capturedAt])
+  @@index([clusterId])
+  @@index([sessionId])
+  @@index([status])
+}
+
+model BarkModelArtifact {
+  id        String     @id @default(cuid())
+  petId     String
+  version   String
+  modelType String
+  artifact  String     @default("{}")
+  metrics   String     @default("{}")
+  status    String     @default("active")
+  trainedAt DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  pet       PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, modelType, status])
+  @@unique([petId, version, modelType])
+}
+
 model Reminder {
   id            String     @id @default(cuid())
   petId         String
@@ -54,6 +143,7 @@ model Reminder {
   active        Boolean    @default(true)
   nextDueAt     DateTime?
   lastDoneAt    DateTime?
+  lastSkippedAt DateTime?
   note          String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt

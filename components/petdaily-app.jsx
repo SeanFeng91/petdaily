@@ -1,18 +1,19 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  AudioWaveform,
   Bell,
   BookOpen,
   Camera,
   Check,
   CheckCircle2,
+  ChevronRight,
   CircleDollarSign,
   Clock3,
   Dog,
   HeartPulse,
   Home,
-  ImagePlus,
   LineChart,
   PauseCircle,
   Pencil,
@@ -21,15 +22,25 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  SkipForward,
   Sparkles,
   Syringe,
   Trash2,
-  Upload,
   Utensils
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  Button as MobileButton,
+  CapsuleTabs,
+  ConfigProvider,
+  FloatingBubble,
+  Popup,
+  SwipeAction,
+  TabBar,
+  Tag
+} from "antd-mobile";
+import zhCN from "antd-mobile/es/locales/zh-CN";
 import { ExpenseChart, WeightChart } from "@/components/charts-panel";
-import { compressImageFile } from "@/components/image-file";
+import BarkMonitorPanel from "@/components/bark-monitor";
 import QuickRecordSheet from "@/components/quick-record-sheet";
 import {
   EVENT_TYPES,
@@ -42,9 +53,8 @@ import {
 
 const navItems = [
   { id: "today", label: "时间轴", icon: Home },
-  { id: "record", label: "记录", icon: BookOpen },
+  { id: "bark", label: "监听", icon: AudioWaveform },
   { id: "insights", label: "洞察", icon: LineChart },
-  { id: "photos", label: "相册", icon: Camera },
   { id: "profile", label: "我的", icon: Settings }
 ];
 
@@ -56,8 +66,57 @@ const eventIcons = {
   VACCINE: Syringe,
   DEWORM: HeartPulse,
   PHOTO: Camera,
+  BARK: AudioWaveform,
   NOTE: BookOpen
 };
+
+const SHORTCUT_STORAGE_KEY = "petdaily.eventShortcuts.v1";
+
+const defaultEventShortcuts = [
+  { id: "breakfast", enabled: true, label: "早餐", type: "FOOD", title: "早餐完成", amount: "45", note: "" },
+  { id: "dinner", enabled: true, label: "晚餐", type: "FOOD", title: "晚餐完成", amount: "45", note: "" },
+  { id: "pee", enabled: true, label: "尿尿", type: "POTTY", title: "外出尿尿", amount: "1", note: "" },
+  { id: "poop", enabled: true, label: "便便", type: "STOOL", title: "便便记录", amount: "1", note: "" },
+  { id: "weight", enabled: true, label: "称重", type: "WEIGHT", title: "体重记录", amount: "", note: "早餐前称重。" },
+  { id: "training", enabled: true, label: "训练", type: "NOTE", title: "训练观察", amount: "", note: "" },
+  { id: "vaccine", enabled: false, label: "疫苗", type: "VACCINE", title: "疫苗记录", amount: "", note: "" },
+  { id: "deworm", enabled: false, label: "驱虫", type: "DEWORM", title: "驱虫记录", amount: "", note: "" }
+];
+
+function normalizeShortcuts(value) {
+  if (!Array.isArray(value)) return defaultEventShortcuts;
+  const byId = new Map(defaultEventShortcuts.map((item) => [item.id, item]));
+  const merged = value
+    .filter((item) => item && item.id)
+    .map((item) => {
+      const fallback = byId.get(item.id) || defaultEventShortcuts[0];
+      const type = EVENT_TYPES[item.type] ? item.type : fallback.type;
+      return {
+        id: String(item.id),
+        enabled: item.enabled !== false,
+        label: String(item.label || fallback.label).slice(0, 8),
+        type,
+        title: String(item.title || item.label || fallback.title).slice(0, 40),
+        amount: item.amount == null ? "" : String(item.amount).slice(0, 12),
+        note: item.note == null ? "" : String(item.note).slice(0, 80)
+      };
+    });
+
+  return merged.length ? merged.slice(0, 12) : defaultEventShortcuts;
+}
+
+function shortcutToTimelinePayload(shortcut, petId) {
+  const meta = EVENT_TYPES[shortcut.type] || EVENT_TYPES.NOTE;
+  return {
+    petId,
+    type: shortcut.type,
+    title: shortcut.title || shortcut.label || meta.label,
+    note: shortcut.note || "",
+    amount: shortcut.amount || "",
+    unit: meta.unit || "",
+    happenedAt: new Date().toISOString()
+  };
+}
 
 function getTodayStart() {
   const today = new Date();
@@ -78,6 +137,7 @@ function isSameDay(value, now = new Date()) {
 function getReminderStatus(reminder, now = new Date()) {
   if (!reminder.active) return { key: "paused", label: "已暂停" };
   if (isSameDay(reminder.lastDoneAt, now)) return { key: "done", label: "今日已完成" };
+  if (isSameDay(reminder.lastSkippedAt, now)) return { key: "skipped", label: "今日已跳过" };
   const [hours, minutes] = reminder.scheduledTime.split(":").map(Number);
   const dueAt = new Date(now);
   dueAt.setHours(hours || 0, minutes || 0, 0, 0);
@@ -116,7 +176,59 @@ function localDateTimeValue(value = new Date()) {
 
 function getTimelineDateKey(value) {
   const date = new Date(value);
-  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function getTodayDateKey() {
+  return getTimelineDateKey(new Date());
+}
+
+function isTodayKey(key) {
+  return key === getTodayDateKey();
+}
+
+function formatDateKeyLabel(key) {
+  if (isTodayKey(key)) return "今天";
+  const [, month, day] = key.split("-");
+  return `${month}/${day}`;
+}
+
+function formatDateKeyWeekday(key) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Intl.DateTimeFormat("zh-CN", {
+    weekday: "short"
+  }).format(new Date(year, month - 1, day));
+}
+
+function buildTimelineDayGroups(events) {
+  const byKey = new Map();
+  for (const event of events) {
+    const key = getTimelineDateKey(event.happenedAt);
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key).push(event);
+  }
+
+  const groups = [...byKey.entries()]
+    .map(([key, groupEvents]) => ({
+      key,
+      label: formatDateKeyLabel(key),
+      subLabel: formatDateKeyWeekday(key),
+      events: groupEvents.sort((a, b) => new Date(b.happenedAt) - new Date(a.happenedAt))
+    }))
+    .sort((a, b) => b.key.localeCompare(a.key));
+
+  if (!byKey.has(getTodayDateKey())) {
+    groups.unshift({
+      key: getTodayDateKey(),
+      label: "今天",
+      subLabel: formatDateKeyWeekday(getTodayDateKey()),
+      events: []
+    });
+  }
+
+  return groups;
 }
 
 function formatTimelineDate(value) {
@@ -162,7 +274,7 @@ function getDerivedData(data) {
       latestWeight && previousWeight
         ? Number((latestWeight.weightKg - previousWeight.weightKg).toFixed(2))
         : null,
-    activeReminders: data.reminders.filter((item) => item.active && !isSameDay(item.lastDoneAt)),
+    activeReminders: data.reminders.filter((item) => item.active && !isSameDay(item.lastDoneAt) && !isSameDay(item.lastSkippedAt)),
     expenseSummary
   };
 }
@@ -186,6 +298,35 @@ function EmptyState() {
       <h1>PetDaily 需要初始化数据</h1>
       <p>请先运行数据库脚本：`npm run db:push` 和 `npm run db:seed`。</p>
     </main>
+  );
+}
+
+function PhotoLightbox({ photo, onClose }) {
+  useEffect(() => {
+    if (!photo) return undefined;
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, photo]);
+
+  if (!photo) return null;
+
+  return (
+    <div className="photoLightbox" role="dialog" aria-modal="true" aria-label="照片浏览">
+      <button className="photoLightboxBackdrop" type="button" onClick={onClose} aria-label="关闭照片预览" />
+      <figure>
+        <img src={photo.url} alt={photo.title || "宠物照片"} />
+        <figcaption>
+          <strong>{photo.title || "成长照片"}</strong>
+          {photo.takenAt ? <span>{formatDateTime(photo.takenAt)}</span> : null}
+        </figcaption>
+      </figure>
+      <button className="photoLightboxClose" type="button" onClick={onClose} aria-label="关闭照片预览">
+        ×
+      </button>
+    </div>
   );
 }
 
@@ -217,49 +358,7 @@ function CoachPanel({ pet, localCoach, latestInsight, onGenerate, loading }) {
   );
 }
 
-function TimelineList({ events, compact = false, onDelete }) {
-  if (!events.length) {
-    return <p className="mutedText">还没有记录。先从喂食、如厕或体重开始。</p>;
-  }
-
-  return (
-    <div className={`timelineList ${compact ? "compact" : ""}`}>
-      {events.map((event) => {
-        const Icon = eventIcons[event.type] || BookOpen;
-        const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
-        return (
-          <article className={`timelineItem tone-${meta.tone}`} key={event.id}>
-            <div className="timelineIcon">
-              <Icon size={17} />
-            </div>
-            <div>
-              <div className="timelineTopline">
-                <strong>{event.title}</strong>
-                <span>{formatDateTime(event.happenedAt)}</span>
-                {onDelete ? (
-                  <button className="miniDangerButton" type="button" onClick={() => onDelete(event)}>
-                    <Trash2 size={15} />
-                    <span>删除</span>
-                  </button>
-                ) : null}
-              </div>
-              {event.amount ? (
-                <p className="eventAmount">
-                  {event.amount}
-                  {event.unit || meta.unit}
-                </p>
-              ) : null}
-              {event.note ? <p>{event.note}</p> : null}
-              {event.photoUrl ? <img className="timelinePhoto" src={event.photoUrl} alt={event.title} /> : null}
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function TimelineStream({ events, onDelete }) {
+function TimelineStream({ events, onDelete, onOpenPhoto }) {
   const groups = useMemo(() => {
     const grouped = [];
     const index = new Map();
@@ -318,7 +417,15 @@ function TimelineStream({ events, onDelete }) {
                       ) : null}
                     </div>
                     {event.note ? <p>{event.note}</p> : null}
-                    {event.photoUrl ? <img className="timelineEntryPhoto" src={event.photoUrl} alt={event.title} /> : null}
+                    {event.photoUrl ? (
+                      <button
+                        className="photoOpenButton timelineEntryPhotoButton"
+                        type="button"
+                        onClick={() => onOpenPhoto?.({ url: event.photoUrl, title: event.title, takenAt: event.happenedAt })}
+                      >
+                        <img className="timelineEntryPhoto" src={event.photoUrl} alt={event.title} />
+                      </button>
+                    ) : null}
                   </div>
                 </article>
               );
@@ -330,7 +437,53 @@ function TimelineStream({ events, onDelete }) {
   );
 }
 
-function ReminderList({ reminders, onComplete, onToggle, onDelete }) {
+function ShortcutGrid({ shortcuts, busyId, onTrigger, onConfigure }) {
+  const visibleShortcuts = shortcuts.filter((shortcut) => shortcut.enabled);
+
+  return (
+    <section className="shortcutPanel">
+      <div className="shortcutHeader">
+        <div>
+          <p>快捷事件</p>
+          <span>
+            {visibleShortcuts.length
+              ? `数字键 1-${Math.min(visibleShortcuts.length, 9)} 可直接触发`
+              : "到我的页面启用常用事件"}
+          </span>
+        </div>
+        <button className="miniActionButton shortcutConfigureButton" type="button" onClick={onConfigure} aria-label="配置快捷事件">
+          <Settings size={14} />
+          <span>配置</span>
+        </button>
+      </div>
+      <div className="shortcutGrid">
+        {visibleShortcuts.length ? visibleShortcuts.map((shortcut, index) => {
+          const meta = EVENT_TYPES[shortcut.type] || EVENT_TYPES.NOTE;
+          return (
+            <button
+              className={`shortcutButton tone-${meta.tone}`}
+              type="button"
+              key={shortcut.id}
+              onClick={() => onTrigger(shortcut)}
+              disabled={busyId === shortcut.id}
+            >
+              <span>{index < 9 ? index + 1 : ""}</span>
+              <strong>{shortcut.label}</strong>
+              {shortcut.amount ? (
+                <small>
+                  {shortcut.amount}
+                  {meta.unit}
+                </small>
+              ) : null}
+            </button>
+          );
+        }) : <p className="mutedText shortcutEmpty">还没有启用的快捷事件。</p>}
+      </div>
+    </section>
+  );
+}
+
+function ReminderList({ reminders, onComplete, onSkip, onToggle, onDelete }) {
   return (
     <div className="reminderList">
       {reminders.map((reminder) => {
@@ -347,6 +500,11 @@ function ReminderList({ reminders, onComplete, onToggle, onDelete }) {
               <button className="checkButton" type="button" onClick={() => onComplete(reminder)} aria-label="完成提醒">
                 {status.key === "done" ? <CheckCircle2 size={16} /> : <Check size={16} />}
               </button>
+              {onSkip ? (
+                <button className="checkButton skip" type="button" onClick={() => onSkip(reminder)} aria-label={status.key === "skipped" ? "取消跳过提醒" : "跳过提醒"}>
+                  <SkipForward size={16} />
+                </button>
+              ) : null}
               <button className="checkButton" type="button" onClick={() => onToggle(reminder)} aria-label={reminder.active ? "暂停提醒" : "启用提醒"}>
                 {reminder.active ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
               </button>
@@ -363,15 +521,258 @@ function ReminderList({ reminders, onComplete, onToggle, onDelete }) {
   );
 }
 
+function getCompactReminderList(reminders) {
+  return [...reminders]
+    .sort((a, b) => {
+      const statusA = getReminderStatus(a);
+      const statusB = getReminderStatus(b);
+      const priority = { due: 0, upcoming: 1, skipped: 2, done: 3, paused: 4 };
+      if (priority[statusA.key] !== priority[statusB.key]) {
+        return priority[statusA.key] - priority[statusB.key];
+      }
+      return a.scheduledTime.localeCompare(b.scheduledTime);
+    })
+    .slice(0, 2);
+}
+
+function MobileEventDetailPopup({ event, onClose, onDelete, onOpenPhoto }) {
+  if (!event) return null;
+  const Icon = eventIcons[event.type] || BookOpen;
+  const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
+
+  return (
+    <Popup
+      visible={Boolean(event)}
+      onMaskClick={onClose}
+      onClose={onClose}
+      position="bottom"
+      bodyClassName="mobileEventPopup"
+      closeOnSwipe
+    >
+      <div className="mobileEventDetail">
+        <div className="mobileEventDetailHeader">
+          <span className={`mobileTimelineGlyph tone-${meta.tone}`}>
+            <Icon size={16} />
+          </span>
+          <div>
+            <Tag color="primary" fill="outline">{meta.label}</Tag>
+            <h3>{event.title}</h3>
+            <p>{formatDateTime(event.happenedAt)}</p>
+          </div>
+        </div>
+        {event.amount ? (
+          <div className="mobileEventFact">
+            <span>数值</span>
+            <strong>
+              {event.amount}
+              {event.unit || meta.unit}
+            </strong>
+          </div>
+        ) : null}
+        {event.photoUrl ? (
+          <button
+            className="photoOpenButton mobileEventPhotoButton"
+            type="button"
+            onClick={() => onOpenPhoto?.({ url: event.photoUrl, title: event.title, takenAt: event.happenedAt })}
+          >
+            <img className="mobileEventDetailPhoto" src={event.photoUrl} alt={event.title} />
+          </button>
+        ) : null}
+        {event.note ? <p className="mobileEventDetailNote">{event.note}</p> : <p className="mutedText mobileEventDetailNote">这条记录暂时没有备注。</p>}
+        <div className="mobileEventDetailActions">
+          <MobileButton block fill="outline" onClick={onClose}>关闭</MobileButton>
+          {onDelete ? (
+            <MobileButton
+              block
+              color="danger"
+              fill="outline"
+              onClick={() => {
+                onClose();
+                onDelete(event);
+              }}
+            >
+              删除
+            </MobileButton>
+          ) : null}
+        </div>
+      </div>
+    </Popup>
+  );
+}
+
+function MobileTimelineList({ events, onDelete, onOpenDetail, onOpenPhoto }) {
+  if (!events.length) {
+    return <p className="mutedText mobileEmptyText">这个日期还没有记录。点右下角新增一条。</p>;
+  }
+
+  return (
+    <div className="mobileTimelineList">
+      {events.map((event) => {
+        const Icon = eventIcons[event.type] || BookOpen;
+        const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
+        return (
+          <SwipeAction
+            key={event.id}
+            rightActions={onDelete ? [{ key: "delete", text: "删除", color: "danger", onClick: () => onDelete(event) }] : []}
+          >
+            <article className={`mobileTimelineRow tone-${meta.tone}`}>
+              <span className="mobileTimelineTime">{formatTimelineTime(event.happenedAt)}</span>
+              <span className="mobileTimelineGlyph">
+                <Icon size={14} />
+              </span>
+              <div className="mobileTimelineCopy">
+                <div>
+                  <strong>{event.title}</strong>
+                  {event.amount ? (
+                    <b>
+                      {event.amount}
+                      {event.unit || meta.unit}
+                    </b>
+                  ) : null}
+                </div>
+                {event.note ? <p>{event.note}</p> : null}
+              </div>
+              {event.photoUrl ? (
+                <button
+                  className="photoOpenButton mobileTimelineThumbButton"
+                  type="button"
+                  onClick={() => onOpenPhoto?.({ url: event.photoUrl, title: event.title, takenAt: event.happenedAt })}
+                >
+                  <img className="mobileTimelineThumb" src={event.photoUrl} alt={event.title} />
+                </button>
+              ) : null}
+              <MobileButton className="mobileDetailButton" size="mini" fill="none" onClick={() => onOpenDetail(event)}>
+                详情
+                <ChevronRight size={12} />
+              </MobileButton>
+            </article>
+          </SwipeAction>
+        );
+      })}
+    </div>
+  );
+}
+
+function MobileTodayView({
+  data,
+  derived,
+  shortcuts,
+  shortcutBusyId,
+  onShortcutTrigger,
+  onConfigureShortcuts,
+  onCompleteReminder,
+  onSkipReminder,
+  onToggleReminder,
+  onDeleteEvent,
+  onOpenPhoto
+}) {
+  const dateGroups = useMemo(() => buildTimelineDayGroups(derived.timelineEvents), [derived.timelineEvents]);
+  const [selectedDateKey, setSelectedDateKey] = useState("");
+  const [detailEvent, setDetailEvent] = useState(null);
+  const selectedGroup = dateGroups.find((group) => group.key === selectedDateKey) || dateGroups[0];
+  const compactReminders = getCompactReminderList(data.reminders);
+
+  useEffect(() => {
+    if (!dateGroups.length) return;
+    if (!selectedDateKey || !dateGroups.some((group) => group.key === selectedDateKey)) {
+      const todayGroup = dateGroups.find((group) => group.key === getTodayDateKey());
+      setSelectedDateKey((todayGroup || dateGroups[0]).key);
+    }
+  }, [dateGroups, selectedDateKey]);
+
+  return (
+    <section className="mobileTodayWorkbench" aria-label="手机端今日工作台">
+      <header className="mobileTopBar">
+        <div>
+          <span>PetDaily</span>
+          <strong>{data.pet.name}</strong>
+        </div>
+        <dl>
+          <div>
+            <dt>今日</dt>
+            <dd>{derived.todayEvents.length}</dd>
+          </div>
+          <div>
+            <dt>体重</dt>
+            <dd>{derived.latestWeight ? `${derived.latestWeight.weightKg}kg` : "--"}</dd>
+          </div>
+        </dl>
+      </header>
+
+      <ShortcutGrid
+        shortcuts={shortcuts}
+        busyId={shortcutBusyId}
+        onTrigger={onShortcutTrigger}
+        onConfigure={onConfigureShortcuts}
+      />
+
+      <section className="mobileReminderBlock">
+        <div className="mobileSectionTitle">
+          <strong>提醒</strong>
+          <span>{compactReminders.length ? "优先显示到点事项" : "暂无提醒"}</span>
+        </div>
+        {compactReminders.length ? (
+          <ReminderList reminders={compactReminders} onComplete={onCompleteReminder} onSkip={onSkipReminder} onToggle={onToggleReminder} />
+        ) : (
+          <p className="mutedText mobileEmptyText">到“我的”里添加喂食、外出或驱虫提醒。</p>
+        )}
+      </section>
+
+      <section className="mobileTimelineCard">
+        <div className="mobileTimelineTools">
+          <div>
+            <strong>事件流</strong>
+            <span>{selectedGroup?.events.length || 0} 条</span>
+          </div>
+          <CapsuleTabs
+            className="mobileDateTabs"
+            activeKey={selectedGroup?.key}
+            onChange={setSelectedDateKey}
+          >
+            {dateGroups.map((group) => (
+              <CapsuleTabs.Tab
+                key={group.key}
+                title={
+                  <span className="mobileDateTab">
+                    <strong>{group.label}</strong>
+                    <em>{group.subLabel}</em>
+                  </span>
+                }
+              />
+            ))}
+          </CapsuleTabs>
+        </div>
+        <MobileTimelineList
+          events={selectedGroup?.events || []}
+          onDelete={onDeleteEvent}
+          onOpenDetail={setDetailEvent}
+          onOpenPhoto={onOpenPhoto}
+        />
+      </section>
+      <MobileEventDetailPopup
+        event={detailEvent}
+        onClose={() => setDetailEvent(null)}
+        onDelete={onDeleteEvent}
+        onOpenPhoto={onOpenPhoto}
+      />
+    </section>
+  );
+}
+
 function TodayView({
   data,
   derived,
-  onOpenRecord,
+  shortcuts,
+  shortcutBusyId,
+  onShortcutTrigger,
+  onConfigureShortcuts,
   onGenerateInsight,
   aiLoading,
   onCompleteReminder,
+  onSkipReminder,
   onToggleReminder,
-  onDeleteEvent
+  onDeleteEvent,
+  onOpenPhoto
 }) {
   const { pet, localCoach, insights } = data;
   const [typeFilter, setTypeFilter] = useState("ALL");
@@ -385,89 +786,83 @@ function TodayView({
   );
 
   return (
-    <div className="timelineWorkspace">
-      <section className="timelineCommandBar">
-        <div>
-          <h1>时间轴</h1>
-          <p>按发生时间持续记录事件，最近的变化始终排在最前。</p>
-        </div>
-        <button className="primaryButton" type="button" onClick={onOpenRecord}>
-          <Plus size={18} />
-          新增事件
-        </button>
-      </section>
-
-      <div className="timelineLayout">
-        <section className="timelinePanel">
-          <div className="timelineToolbar">
-            <div>
-              <p>事件流</p>
-              <span>{filteredEvents.length} 条记录</span>
-            </div>
-            <div className="timelineFilterStrip" aria-label="时间轴筛选">
-              <button
-                className={`filterChip ${typeFilter === "ALL" ? "selected" : ""}`}
-                type="button"
-                onClick={() => setTypeFilter("ALL")}
-              >
-                全部
-              </button>
-              {Object.entries(EVENT_TYPES).map(([key, value]) => (
-                <button
-                  className={`filterChip ${typeFilter === key ? "selected" : ""}`}
-                  type="button"
-                  key={key}
-                  onClick={() => setTypeFilter(key)}
-                >
-                  {value.label}
-                </button>
-              ))}
-            </div>
+    <>
+      <div className="desktopTodayView timelineWorkspace">
+        <section className="timelineCommandBar">
+          <div>
+            <h1>白板日记</h1>
           </div>
-          <TimelineStream events={filteredEvents} onDelete={onDeleteEvent} />
         </section>
 
-        <aside className="timelineAside">
-          <section className="contentPanel compactPanel">
-            <div className="sectionHeading">
-              <p>待办提醒</p>
-              <span>完成 / 暂停</span>
-            </div>
-            <ReminderList reminders={data.reminders.slice(0, 5)} onComplete={onCompleteReminder} onToggle={onToggleReminder} />
-          </section>
-          <CoachPanel
-            pet={pet}
-            localCoach={localCoach}
-            latestInsight={latestInsight}
-            onGenerate={onGenerateInsight}
-            loading={aiLoading}
-          />
-        </aside>
-      </div>
-    </div>
-  );
-}
+        <ShortcutGrid
+          shortcuts={shortcuts}
+          busyId={shortcutBusyId}
+          onTrigger={onShortcutTrigger}
+          onConfigure={onConfigureShortcuts}
+        />
 
-function RecordView({ events, onOpenRecord, onDeleteEvent }) {
-  return (
-    <section className="singleColumn">
-      <div className="pageHeader">
-        <div>
-          <h2>时间日记</h2>
-          <p>饮食、排便、如厕、疫苗、驱虫和成长观察都沉淀在同一条时间线。</p>
+        <div className="timelineLayout">
+          <section className="timelinePanel">
+            <div className="timelineToolbar">
+              <div>
+                <p>事件流</p>
+                <span>{filteredEvents.length} 条记录</span>
+              </div>
+              <div className="timelineFilterStrip" aria-label="时间轴筛选">
+                <button
+                  className={`filterChip ${typeFilter === "ALL" ? "selected" : ""}`}
+                  type="button"
+                  onClick={() => setTypeFilter("ALL")}
+                >
+                  全部
+                </button>
+                {Object.entries(EVENT_TYPES).map(([key, value]) => (
+                  <button
+                    className={`filterChip ${typeFilter === key ? "selected" : ""}`}
+                    type="button"
+                    key={key}
+                    onClick={() => setTypeFilter(key)}
+                  >
+                    {value.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <TimelineStream events={filteredEvents} onDelete={onDeleteEvent} onOpenPhoto={onOpenPhoto} />
+          </section>
+
+          <aside className="timelineAside">
+            <section className="contentPanel compactPanel">
+              <div className="sectionHeading">
+                <p>待办提醒</p>
+                <span>今日</span>
+              </div>
+              <ReminderList reminders={data.reminders.slice(0, 3)} onComplete={onCompleteReminder} onSkip={onSkipReminder} onToggle={onToggleReminder} />
+            </section>
+            <CoachPanel
+              pet={pet}
+              localCoach={localCoach}
+              latestInsight={latestInsight}
+              onGenerate={onGenerateInsight}
+              loading={aiLoading}
+            />
+          </aside>
         </div>
-        <button className="primaryButton" type="button" onClick={onOpenRecord}>
-          <Plus size={18} />
-          新增记录
-        </button>
       </div>
-      <div className="typeLegend">
-        {Object.entries(EVENT_TYPES).map(([key, value]) => (
-          <span className={`legendPill tone-${value.tone}`} key={key}>{value.label}</span>
-        ))}
-      </div>
-      <TimelineList events={events} onDelete={onDeleteEvent} />
-    </section>
+      <MobileTodayView
+        data={data}
+        derived={derived}
+        shortcuts={shortcuts}
+        shortcutBusyId={shortcutBusyId}
+        onShortcutTrigger={onShortcutTrigger}
+        onConfigureShortcuts={onConfigureShortcuts}
+        onCompleteReminder={onCompleteReminder}
+        onSkipReminder={onSkipReminder}
+        onToggleReminder={onToggleReminder}
+        onDeleteEvent={onDeleteEvent}
+        onOpenPhoto={onOpenPhoto}
+      />
+    </>
   );
 }
 
@@ -527,17 +922,14 @@ function WeightLedger({ weightRecords, editingWeight, onEdit, onSave, onCancel, 
           <article className="ledgerItem" key={weight.id}>
             <div>
               <strong>{weight.weightKg} kg</strong>
-              <span>{formatDateTime(weight.measuredAt)}</span>
-              {weight.note ? <small>{weight.note}</small> : null}
+              <span>{formatDateTime(weight.measuredAt)}{weight.note ? ` · ${weight.note}` : ""}</span>
             </div>
             <div className="ledgerActions">
-              <button className="miniActionButton" type="button" onClick={() => onEdit(weight)}>
+              <button className="miniActionButton iconOnlyAction" type="button" onClick={() => onEdit(weight)} aria-label="编辑体重记录">
                 <Pencil size={14} />
-                编辑
               </button>
-              <button className="miniDangerButton" type="button" onClick={() => onDelete(weight)}>
+              <button className="miniDangerButton iconOnlyAction" type="button" onClick={() => onDelete(weight)} aria-label="删除体重记录">
                 <Trash2 size={15} />
-                删除
               </button>
             </div>
           </article>
@@ -663,19 +1055,19 @@ function InsightsView({ data, derived, onCreateExpense, onUpdateExpense, onDelet
             <article key={expense.id}>
               <div>
                 <strong>{expense.itemName}</strong>
-                <span>{EXPENSE_CATEGORIES[expense.category] || expense.category} · {formatDate(expense.purchasedAt)}</span>
-                {expense.note ? <small>{expense.note}</small> : null}
+                <span>
+                  {EXPENSE_CATEGORIES[expense.category] || expense.category} · {formatDate(expense.purchasedAt)}
+                  {expense.note ? ` · ${expense.note}` : ""}
+                </span>
               </div>
               <div className="expenseAmountBlock">
                 <b>{formatCurrency(expense.amountCents)}</b>
                 <div className="ledgerActions">
-                  <button className="miniActionButton" type="button" onClick={() => setEditingExpenseId(expense.id)}>
+                  <button className="miniActionButton iconOnlyAction" type="button" onClick={() => setEditingExpenseId(expense.id)} aria-label={`编辑费用 ${expense.itemName}`}>
                     <Pencil size={14} />
-                    编辑
                   </button>
-                  <button className="miniDangerButton" type="button" onClick={() => onDeleteExpense(expense)}>
+                  <button className="miniDangerButton iconOnlyAction" type="button" onClick={() => onDeleteExpense(expense)} aria-label={`删除费用 ${expense.itemName}`}>
                     <Trash2 size={15} />
-                    删除
                   </button>
                 </div>
               </div>
@@ -698,111 +1090,6 @@ function InsightsView({ data, derived, onCreateExpense, onUpdateExpense, onDelet
           ))}
         </div>
       </section>
-    </section>
-  );
-}
-
-function PhotoForm({ petId, onCreate }) {
-  const cameraInputRef = useRef(null);
-  const albumInputRef = useRef(null);
-  const [url, setUrl] = useState("");
-  const [caption, setCaption] = useState("");
-  const [preview, setPreview] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [processing, setProcessing] = useState(false);
-
-  async function selectFile(file) {
-    if (!file) return;
-    setProcessing(true);
-    try {
-      const dataUrl = await compressImageFile(file);
-      setUrl(dataUrl);
-      setPreview(dataUrl);
-      if (!caption) {
-        setCaption("手机拍摄记录");
-      }
-    } finally {
-      setProcessing(false);
-    }
-  }
-
-  async function submit(event) {
-    event.preventDefault();
-    if (!url) return;
-    setSaving(true);
-    try {
-      await onCreate({ petId, url, caption });
-      setCaption("");
-      setUrl("");
-      setPreview("");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form className="photoCaptureForm" onSubmit={submit}>
-      <input
-        ref={cameraInputRef}
-        className="hiddenFileInput"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(event) => selectFile(event.target.files?.[0])}
-      />
-      <input
-        ref={albumInputRef}
-        className="hiddenFileInput"
-        type="file"
-        accept="image/*"
-        onChange={(event) => selectFile(event.target.files?.[0])}
-      />
-      <div className="photoPickers">
-        <button className="secondaryButton" type="button" onClick={() => cameraInputRef.current?.click()} disabled={processing}>
-          <Camera size={16} />
-          手机拍摄
-        </button>
-        <button className="secondaryButton" type="button" onClick={() => albumInputRef.current?.click()} disabled={processing}>
-          <Upload size={16} />
-          读取相册
-        </button>
-      </div>
-      {preview ? <img className="photoPreview" src={preview} alt="待保存照片预览" /> : null}
-      <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="照片说明，例如：第一次洗澡后" />
-      <input value={url} onChange={(event) => { setUrl(event.target.value); setPreview(event.target.value); }} placeholder="也可粘贴图片 URL 或未来 R2 URL" />
-      <button className="secondaryButton" type="submit" disabled={saving}>
-        <ImagePlus size={16} />
-        {saving ? "保存中" : processing ? "处理中" : "加入相册"}
-      </button>
-    </form>
-  );
-}
-
-function PhotosView({ data, onCreatePhoto, onDeletePhoto }) {
-  return (
-    <section className="singleColumn">
-      <div className="pageHeader">
-        <div>
-          <h2>成长相册</h2>
-          <p>手机端可直接拍摄或读取相册，当前会压缩后同步到 Cloudflare D1；照片多了以后再迁到 R2。</p>
-        </div>
-      </div>
-      <PhotoForm petId={data.pet.id} onCreate={onCreatePhoto} />
-      <div className="photoGrid">
-        {data.photos.map((photo) => (
-          <article className="photoCard" key={photo.id}>
-            <img src={photo.url} alt={photo.caption || "宠物照片"} />
-            <div>
-              <strong>{photo.caption || "成长照片"}</strong>
-              <span>{formatDate(photo.takenAt)}</span>
-              <button className="miniDangerButton" type="button" onClick={() => onDeletePhoto(photo)}>
-                <Trash2 size={15} />
-                删除照片
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
     </section>
   );
 }
@@ -838,6 +1125,65 @@ function ReminderForm({ petId, onCreate }) {
         {saving ? "保存中" : "新增提醒"}
       </button>
     </form>
+  );
+}
+
+function ShortcutSettings({ shortcuts, onChange, onReset }) {
+  function updateShortcut(id, key, value) {
+    onChange(shortcuts.map((item) => (item.id === id ? { ...item, [key]: value } : item)));
+  }
+
+  return (
+    <div className="shortcutSettingsList">
+      {shortcuts.map((shortcut, index) => {
+        const meta = EVENT_TYPES[shortcut.type] || EVENT_TYPES.NOTE;
+        return (
+          <article className="shortcutSettingItem" key={shortcut.id}>
+            <label className="shortcutToggle">
+              <input
+                type="checkbox"
+                checked={shortcut.enabled}
+                onChange={(event) => updateShortcut(shortcut.id, "enabled", event.target.checked)}
+              />
+              <span>{index + 1}</span>
+            </label>
+            <input
+              className="shortcutNameInput"
+              value={shortcut.label}
+              onChange={(event) => updateShortcut(shortcut.id, "label", event.target.value)}
+              placeholder="按钮名"
+            />
+            <select className="shortcutTypeSelect" value={shortcut.type} onChange={(event) => updateShortcut(shortcut.id, "type", event.target.value)}>
+              {Object.entries(EVENT_TYPES).map(([key, value]) => (
+                <option key={key} value={key}>{value.label}</option>
+              ))}
+            </select>
+            <input
+              className="shortcutTitleInput"
+              value={shortcut.title}
+              onChange={(event) => updateShortcut(shortcut.id, "title", event.target.value)}
+              placeholder="记录标题"
+            />
+            <input
+              className="shortcutAmountInput"
+              value={shortcut.amount}
+              onChange={(event) => updateShortcut(shortcut.id, "amount", event.target.value)}
+              placeholder={meta.unit ? `数值 ${meta.unit}` : "数值"}
+              inputMode="decimal"
+            />
+            <input
+              className="shortcutNoteInput"
+              value={shortcut.note}
+              onChange={(event) => updateShortcut(shortcut.id, "note", event.target.value)}
+              placeholder="备注"
+            />
+          </article>
+        );
+      })}
+      <button className="secondaryButton" type="button" onClick={onReset}>
+        恢复默认快捷事件
+      </button>
+    </div>
   );
 }
 
@@ -902,16 +1248,27 @@ function ProfileForm({ pet, onSave }) {
   );
 }
 
-function ProfileView({ data, onSaveProfile, onCreateReminder, onCompleteReminder, onToggleReminder, onDeleteReminder }) {
+function ProfileView({
+  data,
+  shortcuts,
+  onShortcutsChange,
+  onResetShortcuts,
+  onSaveProfile,
+  onCreateReminder,
+  onCompleteReminder,
+  onSkipReminder,
+  onToggleReminder,
+  onDeleteReminder
+}) {
   return (
     <section className="singleColumn">
       <div className="pageHeader">
         <div>
           <h2>我的宠物</h2>
-          <p>维护基础档案、提醒计划和后续 Cloudflare 同步边界。</p>
+          <p>维护基础档案、快捷事件和提醒计划。</p>
         </div>
       </div>
-      <section className="contentPanel">
+      <section className="contentPanel settingsSection">
         <div className="sectionHeading">
           <p>宠物档案</p>
           <span>第一版支持一只宠物</span>
@@ -920,6 +1277,13 @@ function ProfileView({ data, onSaveProfile, onCreateReminder, onCompleteReminder
       </section>
       <section className="contentPanel">
         <div className="sectionHeading">
+          <p>快捷事件</p>
+          <span>首页按钮和数字键会同步更新</span>
+        </div>
+        <ShortcutSettings shortcuts={shortcuts} onChange={onShortcutsChange} onReset={onResetShortcuts} />
+      </section>
+      <section className="contentPanel settingsSection">
+        <div className="sectionHeading">
           <p>提醒计划</p>
           <span>可完成、暂停、删除，会同步到 D1</span>
         </div>
@@ -927,6 +1291,7 @@ function ProfileView({ data, onSaveProfile, onCreateReminder, onCompleteReminder
         <ReminderList
           reminders={data.reminders}
           onComplete={onCompleteReminder}
+          onSkip={onSkipReminder}
           onToggle={onToggleReminder}
           onDelete={onDeleteReminder}
         />
@@ -942,13 +1307,96 @@ function ProfileView({ data, onSaveProfile, onCreateReminder, onCompleteReminder
 }
 
 export default function PetDailyApp({ initialData }) {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState("today");
   const [data, setData] = useState(initialData);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [shortcutBusyId, setShortcutBusyId] = useState(null);
+  const [shortcutsLoaded, setShortcutsLoaded] = useState(false);
+  const [eventShortcuts, setEventShortcuts] = useState(defaultEventShortcuts);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const derived = useMemo(() => getDerivedData(data), [data]);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(SHORTCUT_STORAGE_KEY);
+      if (stored) {
+        setEventShortcuts(normalizeShortcuts(JSON.parse(stored)));
+      }
+    } catch {
+      setEventShortcuts(defaultEventShortcuts);
+    } finally {
+      setShortcutsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!shortcutsLoaded) return;
+    window.localStorage.setItem(SHORTCUT_STORAGE_KEY, JSON.stringify(eventShortcuts));
+  }, [eventShortcuts, shortcutsLoaded]);
+
+  useEffect(() => {
+    function handleShortcutKey(event) {
+      if (!data.pet) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      const keyNumber = Number(event.key);
+      if (!Number.isInteger(keyNumber) || keyNumber < 1 || keyNumber > 9) return;
+      const shortcut = eventShortcuts.filter((item) => item.enabled)[keyNumber - 1];
+      if (!shortcut || shortcutBusyId) return;
+      event.preventDefault();
+      createShortcutTimeline(shortcut);
+    }
+
+    window.addEventListener("keydown", handleShortcutKey);
+    return () => window.removeEventListener("keydown", handleShortcutKey);
+  });
+
+  useEffect(() => {
+    const visualViewport = window.visualViewport;
+    const inputTypesWithoutKeyboard = new Set(["checkbox", "radio", "file", "color", "range", "hidden", "button", "submit"]);
+
+    function isKeyboardTarget(element) {
+      if (!element) return false;
+      if (element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) return true;
+      if (element instanceof HTMLInputElement) return !inputTypesWithoutKeyboard.has(element.type);
+      return Boolean(element.isContentEditable);
+    }
+
+    function syncKeyboardState() {
+      const focused = isKeyboardTarget(document.activeElement);
+      const viewportHeight = visualViewport?.height || window.innerHeight;
+      const isCompressed = window.innerHeight - viewportHeight > 120;
+      const isMobileWidth = window.matchMedia("(max-width: 980px)").matches;
+      setKeyboardOpen(focused && (isMobileWidth || isCompressed));
+    }
+
+    function deferSyncKeyboardState() {
+      window.setTimeout(syncKeyboardState, 80);
+    }
+
+    window.addEventListener("focusin", syncKeyboardState);
+    window.addEventListener("focusout", deferSyncKeyboardState);
+    visualViewport?.addEventListener("resize", syncKeyboardState);
+    visualViewport?.addEventListener("scroll", syncKeyboardState);
+    return () => {
+      window.removeEventListener("focusin", syncKeyboardState);
+      window.removeEventListener("focusout", deferSyncKeyboardState);
+      visualViewport?.removeEventListener("resize", syncKeyboardState);
+      visualViewport?.removeEventListener("scroll", syncKeyboardState);
+    };
+  }, []);
 
   if (!data.pet) {
     return <EmptyState />;
@@ -994,7 +1442,33 @@ export default function PetDailyApp({ initialData }) {
       }
       return next;
     });
-    router.refresh();
+  }
+
+  function appendTimelineEvent(event) {
+    if (!event) return;
+    setData((current) => ({
+      ...current,
+      timelineEvents: current.timelineEvents.some((item) => item.id === event.id)
+        ? current.timelineEvents
+        : [event, ...current.timelineEvents]
+    }));
+  }
+
+  async function createShortcutTimeline(shortcut) {
+    if (!data.pet) return;
+    const payload = shortcutToTimelinePayload(shortcut, data.pet.id);
+    if (payload.type === "WEIGHT" && !payload.amount) {
+      const input = window.prompt("输入本次体重 kg");
+      if (!input) return;
+      payload.amount = input;
+    }
+
+    setShortcutBusyId(shortcut.id);
+    try {
+      await createTimeline(payload);
+    } finally {
+      setShortcutBusyId(null);
+    }
   }
 
   async function deleteTimeline(event) {
@@ -1033,7 +1507,6 @@ export default function PetDailyApp({ initialData }) {
         weightRecords: nextWeightRecords
       };
     });
-    router.refresh();
   }
 
   async function createExpense(payload) {
@@ -1045,7 +1518,6 @@ export default function PetDailyApp({ initialData }) {
     if (!response.ok) throw new Error("Failed to create expense");
     const { expense } = await response.json();
     setData((current) => ({ ...current, expenses: sortExpenses([expense, ...current.expenses]) }));
-    router.refresh();
   }
 
   async function updateExpense(payload) {
@@ -1060,7 +1532,6 @@ export default function PetDailyApp({ initialData }) {
       ...current,
       expenses: sortExpenses(current.expenses.map((item) => (item.id === expense.id ? expense : item)))
     }));
-    router.refresh();
   }
 
   async function deleteExpenseItem(expense) {
@@ -1075,7 +1546,6 @@ export default function PetDailyApp({ initialData }) {
       ...current,
       expenses: current.expenses.filter((item) => item.id !== expense.id)
     }));
-    router.refresh();
   }
 
   async function updateWeight(payload) {
@@ -1094,7 +1564,6 @@ export default function PetDailyApp({ initialData }) {
         ? current.timelineEvents.map((item) => (item.id === timelineEvent.id ? timelineEvent : item))
         : current.timelineEvents
     }));
-    router.refresh();
   }
 
   async function deleteWeightItem(weight) {
@@ -1114,39 +1583,6 @@ export default function PetDailyApp({ initialData }) {
       weightRecords: current.weightRecords.filter((item) => item.id !== weight.id),
       timelineEvents: current.timelineEvents.filter((item) => !deletedTimelineIds.has(item.id))
     }));
-    router.refresh();
-  }
-
-  async function createPhoto(payload) {
-    const response = await fetch("/api/photos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) throw new Error("Failed to create photo");
-    const { photo } = await response.json();
-    setData((current) => ({ ...current, photos: [photo, ...current.photos] }));
-    router.refresh();
-  }
-
-  async function deletePhoto(photo) {
-    const ok = window.confirm(`删除「${photo.caption || "成长照片"}」吗？`);
-    if (!ok) return;
-
-    const response = await fetch(`/api/photos?id=${encodeURIComponent(photo.id)}`, {
-      method: "DELETE"
-    });
-    if (!response.ok) throw new Error("Failed to delete photo");
-    const { result } = await response.json();
-
-    setData((current) => ({
-      ...current,
-      photos: current.photos.filter((item) => item.id !== photo.id),
-      timelineEvents: result.linkedEventId
-        ? current.timelineEvents.filter((item) => item.id !== result.linkedEventId)
-        : current.timelineEvents
-    }));
-    router.refresh();
   }
 
   async function createReminder(payload) {
@@ -1158,7 +1594,6 @@ export default function PetDailyApp({ initialData }) {
     if (!response.ok) throw new Error("Failed to create reminder");
     const { reminder } = await response.json();
     setData((current) => ({ ...current, reminders: [...current.reminders, reminder] }));
-    router.refresh();
   }
 
   async function toggleReminder(reminder) {
@@ -1173,7 +1608,6 @@ export default function PetDailyApp({ initialData }) {
       ...current,
       reminders: current.reminders.map((item) => (item.id === updated.id ? updated : item))
     }));
-    router.refresh();
   }
 
   async function completeReminder(reminder) {
@@ -1193,7 +1627,25 @@ export default function PetDailyApp({ initialData }) {
       ...current,
       reminders: current.reminders.map((item) => (item.id === updated.id ? updated : item))
     }));
-    router.refresh();
+  }
+
+  async function skipReminder(reminder) {
+    const status = getReminderStatus(reminder);
+    const response = await fetch("/api/reminders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: reminder.id,
+        skip: status.key !== "skipped",
+        resetSkip: status.key === "skipped"
+      })
+    });
+    if (!response.ok) throw new Error("Failed to skip reminder");
+    const { reminder: updated } = await response.json();
+    setData((current) => ({
+      ...current,
+      reminders: current.reminders.map((item) => (item.id === updated.id ? updated : item))
+    }));
   }
 
   async function deleteReminderItem(reminder) {
@@ -1208,7 +1660,6 @@ export default function PetDailyApp({ initialData }) {
       ...current,
       reminders: current.reminders.filter((item) => item.id !== reminder.id)
     }));
-    router.refresh();
   }
 
   async function saveProfile(payload) {
@@ -1220,7 +1671,6 @@ export default function PetDailyApp({ initialData }) {
     if (!response.ok) throw new Error("Failed to save profile");
     const { pet } = await response.json();
     setData((current) => ({ ...current, pet }));
-    router.refresh();
   }
 
   async function generateInsight() {
@@ -1234,14 +1684,14 @@ export default function PetDailyApp({ initialData }) {
       if (!response.ok) throw new Error("Failed to generate insight");
       const { insight } = await response.json();
       setData((current) => ({ ...current, insights: [insight, ...current.insights] }));
-      router.refresh();
     } finally {
       setAiLoading(false);
     }
   }
 
   return (
-    <div className="appShell">
+    <ConfigProvider locale={zhCN}>
+    <div className={`appShell ${keyboardOpen ? "keyboardOpen" : ""}`}>
       <aside className="desktopRail">
         <div className="brandLockup">
           <span><Dog size={20} /></span>
@@ -1264,16 +1714,21 @@ export default function PetDailyApp({ initialData }) {
           <TodayView
             data={data}
             derived={derived}
-            onOpenRecord={() => setSheetOpen(true)}
+            shortcuts={eventShortcuts}
+            shortcutBusyId={shortcutBusyId}
+            onShortcutTrigger={createShortcutTimeline}
+            onConfigureShortcuts={() => setActiveTab("profile")}
             onGenerateInsight={generateInsight}
             aiLoading={aiLoading}
             onCompleteReminder={completeReminder}
+            onSkipReminder={skipReminder}
             onToggleReminder={toggleReminder}
             onDeleteEvent={deleteTimeline}
+            onOpenPhoto={setLightboxPhoto}
           />
         ) : null}
-        {activeTab === "record" ? (
-          <RecordView events={derived.timelineEvents} onOpenRecord={() => setSheetOpen(true)} onDeleteEvent={deleteTimeline} />
+        {activeTab === "bark" ? (
+          <BarkMonitorPanel pet={data.pet} timelineEvents={derived.timelineEvents} onTimelineCreated={appendTimelineEvent} />
         ) : null}
         {activeTab === "insights" ? (
           <InsightsView
@@ -1286,30 +1741,54 @@ export default function PetDailyApp({ initialData }) {
             onDeleteWeight={deleteWeightItem}
           />
         ) : null}
-        {activeTab === "photos" ? (
-          <PhotosView data={data} onCreatePhoto={createPhoto} onDeletePhoto={deletePhoto} />
-        ) : null}
         {activeTab === "profile" ? (
           <ProfileView
             data={data}
+            shortcuts={eventShortcuts}
+            onShortcutsChange={(nextShortcuts) => setEventShortcuts(normalizeShortcuts(nextShortcuts))}
+            onResetShortcuts={() => setEventShortcuts(defaultEventShortcuts)}
             onSaveProfile={saveProfile}
             onCreateReminder={createReminder}
             onCompleteReminder={completeReminder}
+            onSkipReminder={skipReminder}
             onToggleReminder={toggleReminder}
             onDeleteReminder={deleteReminderItem}
           />
         ) : null}
       </main>
 
-      <nav className="mobileNav" aria-label="主导航">
-        {navItems.map((item) => (
-          <NavButton
-            key={item.id}
-            item={item}
-            selected={activeTab === item.id}
-            onClick={() => setActiveTab(item.id)}
-          />
-        ))}
+      <button className="floatingAddButton desktopAddButton" type="button" onClick={() => setSheetOpen(true)} aria-label="新增事件">
+        <Plus size={24} />
+      </button>
+
+      <FloatingBubble
+        className="mobileAddBubble"
+        axis="lock"
+        onClick={() => setSheetOpen(true)}
+        style={{
+          "--initial-position-right": "12px",
+          "--initial-position-bottom": "78px",
+          "--z-index": "32",
+          "--size": "50px",
+          "--background": "var(--text)"
+        }}
+      >
+        <Plus size={24} />
+      </FloatingBubble>
+
+      <nav className="mobileNav admMobileNav" aria-label="主导航">
+        <TabBar activeKey={activeTab} onChange={setActiveTab} safeArea>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <TabBar.Item
+                key={item.id}
+                icon={(active) => <Icon size={active ? 20 : 19} strokeWidth={active ? 2.5 : 2} />}
+                title={item.label}
+              />
+            );
+          })}
+        </TabBar>
       </nav>
 
       <QuickRecordSheet
@@ -1318,6 +1797,8 @@ export default function PetDailyApp({ initialData }) {
         onClose={() => setSheetOpen(false)}
         onCreate={createTimeline}
       />
+      <PhotoLightbox photo={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />
     </div>
+    </ConfigProvider>
   );
 }

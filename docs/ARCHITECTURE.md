@@ -21,6 +21,7 @@ app/
 components/
   petdaily-app.jsx     主交互工作台
   quick-record-sheet.jsx
+  image-file.js        浏览器端图片压缩
   charts-panel.jsx
 lib/
   ai-coach.js          AI / mock fallback
@@ -49,12 +50,20 @@ docs/
 - `PhotoAsset`：照片路径/URL 和说明。
 - `AiInsight`：AI 建议历史。
 
+后续狗叫声检测需要新增声学数据模型，详见 `docs/BARK_DETECTION.md`：
+
+- `BarkEvent`：狗叫事件元数据、置信度、持续时长、主人反馈、关联时间线事件。
+- `BarkAudioClip`：音频对象存储地址、时长、格式、大小、采样率。
+- `BarkFeatureVector`：响度、频谱、过零率、MFCC/embedding、模型版本。
+- `BarkModelFeedback`：人工标签、处理动作、是否停止、备注。
+
 ## 4. API
 
 - `GET/POST /api/pets`
 - `GET/POST/DELETE /api/timeline`
+- `GET/PATCH/DELETE /api/weights`
 - `GET/POST/PATCH/DELETE /api/reminders`
-- `GET/POST /api/expenses`
+- `GET/POST/PATCH/DELETE /api/expenses`
 - `GET/POST/DELETE /api/photos`
 - `GET /api/insights`
 - `POST /api/ai/coach`
@@ -74,3 +83,18 @@ docs/
 - `lib/pet-store.js` 是唯一数据访问层；API 和首页不直接依赖 Prisma。
 - D1 schema 位于 `migrations/0001_petdaily_schema.sql`，远程 seed 位于 `cloudflare/seed.sql`。
 - 图片当前在浏览器端压缩为 Data URL 后写入 D1，适合少量个人记录；下一步可以把上传文件接入 R2，再保存 R2 URL。
+
+## 7. 声学智能预研
+
+狗叫检测的第一阶段建议保持为浏览器前台能力：
+
+- 前端通过 `getUserMedia()` 获取麦克风权限，用 Web Audio 做实时能量、频谱和自适应噪声基线检测。
+- 命中候选狗叫后，用 MediaRecorder 保存触发前后短音频片段，并在监听页用单播放器回放代表片段与简易波形。
+- 端上先过滤人声倾向和稳定噪音；30 秒内连续触发合并为一个 `BarkSession`，避免时间线被刷屏。
+- 端上只做粗筛，不上传全天环境音；短音频进入 R2，D1 保存 `BarkSample`、`BarkSession`、`BarkCluster`、事件、特征、声学 embedding、标签和对象 URL。
+- 时间线新增 `BARK` 类型事件，用于和喂食、外出、训练、提醒等上下文关联。
+- AI 判断必须结合主人反馈持续校准，输出概率、理由和待确认标签，不输出确定性行为结论。
+- 当前 V3 已把候选样本、叫声段和聚类迁移到 D1 结构化 Bark 表，主人可以批量标注一组相似声音。
+- 后续摄像头接入时，视觉侧只产出结构化线索，例如位置、姿态、朝向、门口/食盆附近等，再与声音向量和时间上下文融合。
+
+当前 Web/PWA 不能可靠承诺锁屏或后台长期监听。若目标是无人值守全天监测，需要后续评估 Expo/React Native 原生壳或固定采集设备。

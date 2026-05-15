@@ -1,0 +1,31 @@
+{
+  "name": "PetDaily 白板日记",
+  "short_name": "PetDaily",
+  "description": "手机优先的宠物日常记录、提醒和成长洞察工具。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7faf8",
+  "theme_color": "#18231f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/petdaily-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/petdaily-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/petdaily-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
