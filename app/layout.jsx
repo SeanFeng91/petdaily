@@ -11,6 +11,7 @@ export const metadata = {
   },
   icons: {
     icon: "/icons/petdaily-icon.svg",
+    shortcut: "/icons/petdaily-icon-192.png",
     apple: "/icons/petdaily-icon-192.png"
   }
 };

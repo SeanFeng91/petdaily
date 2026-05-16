@@ -20,6 +20,7 @@ import {
   Volume2,
   XCircle
 } from "lucide-react";
+import { CapsuleTabs, Popup } from "antd-mobile";
 import BarkLabelManager from "@/components/bark-label-manager";
 import { DEFAULT_BARK_LABEL_OPTIONS, mergeBarkLabelOptions } from "@/lib/bark-label-options";
 import {
@@ -39,6 +40,9 @@ const CLIP_TAIL_MS = 1300;
 const MAX_ROLLING_CHUNKS = 8;
 const SPECTROGRAM_BANDS = 32;
 const SPECTROGRAM_FRAME_LIMIT = 96;
+const ANALYZE_INTERVAL_MS = 140;
+const HIDDEN_ANALYZE_INTERVAL_MS = 320;
+const UI_UPDATE_INTERVAL_MS = 280;
 const sensitivityConfig = BARK_SENSITIVITY_CONFIG;
 
 const fallbackReasonOptions = DEFAULT_BARK_LABEL_OPTIONS;
@@ -58,6 +62,32 @@ function formatDuration(startedAt, endedAt) {
   if (!Number.isFinite(start) || !Number.isFinite(end)) return "短时";
   const seconds = Math.max(1, Math.round((end - start) / 1000));
   return seconds >= 60 ? `${Math.round(seconds / 60)} 分钟` : `${seconds} 秒`;
+}
+
+function getSessionDateKey(value) {
+  const date = new Date(value);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function formatSessionDateLabel(key) {
+  if (key === getSessionDateKey(new Date())) return "今天";
+  const [, month, day] = key.split("-");
+  return `${month}/${day}`;
+}
+
+function formatSessionWeekday(key) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Intl.DateTimeFormat("zh-CN", { weekday: "short" }).format(new Date(year, month - 1, day));
+}
+
+function formatSessionTime(value) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(new Date(value));
 }
 
 function getReasonLabel(reason, options = fallbackReasonOptions) {
@@ -195,37 +225,85 @@ function Waveform({ values = [] }) {
   );
 }
 
+function spectrogramHeatColor(intensity) {
+  const t = clamp(intensity);
+  if (t < 0.15) return [5, 15, 47, Math.round(60 + t * 400)];
+  if (t < 0.35) {
+    const p = (t - 0.15) / 0.2;
+    return [Math.round(10 + p * 30), Math.round(20 + p * 60), Math.round(110 + p * 90), Math.round(160 + p * 80)];
+  }
+  if (t < 0.55) {
+    const p = (t - 0.35) / 0.2;
+    return [Math.round(40 + p * 80), Math.round(140 + p * 80), Math.round(200 - p * 40), Math.round(220 + p * 35)];
+  }
+  if (t < 0.75) {
+    const p = (t - 0.55) / 0.2;
+    return [Math.round(120 + p * 120), Math.round(210 - p * 40), Math.round(80 + p * 40), 255];
+  }
+  const p = (t - 0.75) / 0.25;
+  return [Math.round(240 + p * 15), Math.round(170 + p * 70), Math.round(60 + p * 40), 255];
+}
+
 function SpectrogramView({ sample, compact = false }) {
+  const canvasRef = useRef(null);
   const features = sample.features || {};
   const storedFrames = normalizeSpectrogramFrames(sample.spectrogram || features.spectrogram || [], compact ? 52 : 84, SPECTROGRAM_BANDS);
   const fallbackWaveform = sample.waveform?.length ? sample.waveform : Array.from({ length: compact ? 40 : 72 }, () => 0.05);
   const embedding = sample.embedding?.length ? sample.embedding : buildBarkEmbedding(features);
   const columns = storedFrames.length || (compact ? 52 : 84);
   const rows = compact ? 18 : 30;
-  const cells = [];
   const highRatio = clamp(Number(features.highRatio || 0));
   const centroid = clamp(Number(features.centroid || 0));
   const flux = clamp(Number(features.spectralFlux || 0) * 5);
   const flatness = clamp(Number(features.spectralFlatness || 0));
 
-  for (let x = 0; x < columns; x += 1) {
-    const sourceFrame = storedFrames[x];
-    const wave = clamp(Number(fallbackWaveform[Math.floor((x / columns) * fallbackWaveform.length)] || 0));
-    const embed = clamp(Math.abs(Number(embedding[x % Math.max(1, embedding.length)] || 0)));
-    for (let y = 0; y < rows; y += 1) {
-      const frequency = 1 - y / Math.max(1, rows - 1);
-      const frameBand = sourceFrame
-        ? sourceFrame[Math.min(sourceFrame.length - 1, Math.max(0, Math.round((1 - frequency) * (sourceFrame.length - 1))))]
-        : null;
-      const harmonic = Math.exp(-Math.abs(frequency - (0.18 + centroid * 0.62)) * (8 + flux * 8));
-      const highEnergy = frequency > 0.58 ? highRatio * 0.46 : 0;
-      const texture = flatness * 0.08 * ((x + y) % 3);
-      const intensity = sourceFrame
-        ? clamp(Number(frameBand || 0) * 1.34 + wave * 0.18 + embed * 0.05)
-        : clamp(wave * 0.42 + embed * 0.12 + harmonic * wave * 0.95 + highEnergy + texture);
-      cells.push({ x, y, intensity });
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const displayWidth = canvas.clientWidth || canvas.offsetWidth || 300;
+    const displayHeight = canvas.clientHeight || canvas.offsetHeight || 120;
+    canvas.width = Math.round(displayWidth * dpr);
+    canvas.height = Math.round(displayHeight * dpr);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const cellW = displayWidth / columns;
+    const cellH = displayHeight / rows;
+
+    for (let x = 0; x < columns; x += 1) {
+      const sourceFrame = storedFrames[x];
+      const wave = clamp(Number(fallbackWaveform[Math.floor((x / columns) * fallbackWaveform.length)] || 0));
+      const embed = clamp(Math.abs(Number(embedding[x % Math.max(1, embedding.length)] || 0)));
+      for (let y = 0; y < rows; y += 1) {
+        const frequency = 1 - y / Math.max(1, rows - 1);
+        const frameBand = sourceFrame
+          ? sourceFrame[Math.min(sourceFrame.length - 1, Math.max(0, Math.round((1 - frequency) * (sourceFrame.length - 1))))]
+          : null;
+        const harmonic = Math.exp(-Math.abs(frequency - (0.18 + centroid * 0.62)) * (8 + flux * 8));
+        const highEnergy = frequency > 0.58 ? highRatio * 0.46 : 0;
+        const texture = flatness * 0.08 * ((x + y) % 3);
+        const intensity = sourceFrame
+          ? clamp(Number(frameBand || 0) * 1.34 + wave * 0.18 + embed * 0.05)
+          : clamp(wave * 0.42 + embed * 0.12 + harmonic * wave * 0.95 + highEnergy + texture);
+
+        const [r, g, b, a] = spectrogramHeatColor(intensity);
+        ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+        ctx.fillRect(Math.floor(x * cellW), Math.floor(y * cellH), Math.ceil(cellW) + 1, Math.ceil(cellH) + 1);
+      }
     }
-  }
+
+    // Draw subtle grid overlay for professional look
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.lineWidth = 0.5;
+    for (let y = 0; y < rows; y += 4) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * cellH);
+      ctx.lineTo(displayWidth, y * cellH);
+      ctx.stroke();
+    }
+  }, [columns, rows, storedFrames, fallbackWaveform, embedding, highRatio, centroid, flux, flatness]);
 
   return (
     <div className="barkSpectrogram" aria-label="专业声谱图">
@@ -234,11 +312,7 @@ function SpectrogramView({ sample, compact = false }) {
         <span>4k</span>
         <span>0</span>
       </div>
-      <div className="barkSpectrogramGrid" style={{ "--spec-cols": columns, "--spec-rows": rows }}>
-        {cells.map((cell) => (
-          <i key={`${cell.x}-${cell.y}`} style={{ "--heat": cell.intensity }} />
-        ))}
-      </div>
+      <canvas ref={canvasRef} className="barkSpectrogramCanvas" />
       <span className="barkSpectrogramMode">{storedFrames.length ? "FFT 频谱" : "旧样本估算"}</span>
     </div>
   );
@@ -396,6 +470,14 @@ function RecommendationBadge({ sample, labelOptions = fallbackReasonOptions }) {
   return null;
 }
 
+function getRepresentativeSample(session, samples) {
+  return (
+    samples.find((sample) => sample.id === session.representativeSampleId) ||
+    [...samples].sort((a, b) => Number(b.barkScore || 0) - Number(a.barkScore || 0))[0] ||
+    null
+  );
+}
+
 function SampleCard({ sample, compact = false, onLabel, onPlay, player, labelOptions = fallbackReasonOptions }) {
   const score = Math.round((sample.barkScore || 0) * 100);
   const statusText = sample.status === "confirmed" ? "已确认" : sample.status === "false_positive" ? "误报" : "待归类";
@@ -494,9 +576,7 @@ function ClusterCard({ cluster, samples, onLabel, onPlay, player, clusterStat, l
 function SessionCard({ session, samples, onLabel, onPlay, player, labelOptions = fallbackReasonOptions }) {
   const sortedSamples = [...samples].sort((a, b) => new Date(a.capturedAt) - new Date(b.capturedAt));
   const displaySamples = [...samples].sort((a, b) => new Date(b.capturedAt) - new Date(a.capturedAt));
-  const representative =
-    samples.find((sample) => sample.id === session.representativeSampleId) ||
-    [...samples].sort((a, b) => Number(b.barkScore || 0) - Number(a.barkScore || 0))[0];
+  const representative = getRepresentativeSample(session, samples);
   const profile = getBarkAcousticProfile(representative?.features || session.summary?.lastProfile || {});
   const waveform = buildSessionWaveform(sortedSamples);
   const maxIndex = Math.max(1, sortedSamples.length - 1);
@@ -545,6 +625,108 @@ function SessionCard({ session, samples, onLabel, onPlay, player, labelOptions =
           </div>
         </details>
       ) : null}
+    </section>
+  );
+}
+
+function SessionDetailPopup({ group, onClose, onLabel, onPlay, player, labelOptions = fallbackReasonOptions }) {
+  if (!group) return null;
+  const { session, samples } = group;
+  const representative = getRepresentativeSample(session, samples);
+  const displaySamples = [...samples]
+    .sort((a, b) => new Date(b.capturedAt) - new Date(a.capturedAt))
+    .filter((sample) => sample.id !== representative?.id);
+  const score = Math.round((representative?.barkScore || 0) * 100);
+  const statusText = session.status === "confirmed" ? "已确认" : session.status === "false_positive" ? "误报" : "待校准";
+
+  return (
+    <Popup
+      visible={Boolean(group)}
+      onMaskClick={onClose}
+      onClose={onClose}
+      position="bottom"
+      bodyClassName="barkDetailPopup"
+      closeOnSwipe
+    >
+      <section className="barkDetailSheet">
+        <div className="sectionHeading">
+          <p>片段详情</p>
+          <span>{formatDateTime(session.startedAt)}</span>
+        </div>
+        <div className="barkSessionMeta compact">
+          <span>{formatDuration(session.startedAt, session.endedAt)}</span>
+          <span>{session.barkCount || session.sampleCount || samples.length} 次触发</span>
+          <strong>{score}%</strong>
+          <em>{statusText}</em>
+        </div>
+        {representative ? (
+          <SampleCard sample={representative} onLabel={onLabel} onPlay={onPlay} player={player} labelOptions={labelOptions} />
+        ) : null}
+        {displaySamples.length ? (
+          <details className="barkClusterDetails" open>
+            <summary>本段其余 {displaySamples.length} 条片段</summary>
+            <div className="barkSampleStack">
+              {displaySamples.map((sample) => (
+                <SampleCard sample={sample} key={sample.id} compact onLabel={onLabel} onPlay={onPlay} player={player} labelOptions={labelOptions} />
+              ))}
+            </div>
+          </details>
+        ) : null}
+      </section>
+    </Popup>
+  );
+}
+
+function CompactSessionList({
+  dateGroups,
+  selectedDateKey,
+  onSelectDateKey,
+  onOpenDetail,
+  onPlay,
+  player,
+  labelOptions = fallbackReasonOptions
+}) {
+  const selectedGroup = dateGroups.find((group) => group.key === selectedDateKey) || dateGroups[0];
+
+  if (!dateGroups.length) {
+    return <p className="mutedText">还没有声音样本。建议先用“降误报”监听一段时间，再回来看声纹段。</p>;
+  }
+
+  return (
+    <section className="barkSessionCompactPanel">
+      <CapsuleTabs className="barkDateTabs" activeKey={selectedGroup?.key} onChange={onSelectDateKey}>
+        {dateGroups.map((group) => (
+          <CapsuleTabs.Tab key={group.key} title={`${group.label} ${group.subLabel}`} />
+        ))}
+      </CapsuleTabs>
+      <div className="barkSessionRows">
+        {(selectedGroup?.groups || []).map((group) => {
+          const representative = getRepresentativeSample(group.session, group.samples);
+          const score = Math.round((representative?.barkScore || 0) * 100);
+          const isActive = player.sampleId === representative?.id;
+          const isPlaying = isActive && player.status === "playing";
+          const reason = group.session.modelSuggestion || representative?.modelSuggestion || group.session.reason || representative?.reason;
+          const label = getReasonLabel(reason, labelOptions) || "待细分";
+
+          return (
+            <article className={`barkSessionRow ${isActive ? "active" : ""}`} key={group.session.id}>
+              <div className="barkSessionRowMain">
+                <strong>{formatSessionTime(group.session.startedAt)}</strong>
+                <span>{formatDuration(group.session.startedAt, group.session.endedAt)} · {group.session.barkCount || group.session.sampleCount || group.samples.length} 次</span>
+              </div>
+              <em>{label}</em>
+              <b>{score}%</b>
+              <button className="miniActionButton" type="button" onClick={() => representative && onPlay(representative)} disabled={!representative}>
+                {isPlaying ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
+                {isPlaying ? "暂停" : "播放"}
+              </button>
+              <button className="miniActionButton" type="button" onClick={() => onOpenDetail(group.session.id)}>
+                详情
+              </button>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -810,7 +992,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   const [listening, setListening] = useState(false);
   const [permissionState, setPermissionState] = useState("未启动");
   const [error, setError] = useState("");
-  const [sensitivity, setSensitivity] = useState("low");
+  const [sensitivity, setSensitivity] = useState("high");
   const [level, setLevel] = useState(0);
   const [barkScore, setBarkScore] = useState(0);
   const [noiseLevel, setNoiseLevel] = useState(0);
@@ -828,6 +1010,8 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   const [rebuildingClusters, setRebuildingClusters] = useState(false);
   const [filterStats, setFilterStats] = useState({ humanVoice: 0, steadyNoise: 0, merged: 0, clipQuota: 0 });
   const [player, setPlayer] = useState({ sampleId: null, src: "", status: "idle", error: "" });
+  const [selectedSessionDateKey, setSelectedSessionDateKey] = useState("");
+  const [detailSessionId, setDetailSessionId] = useState("");
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [meydaReady, setMeydaReady] = useState(false);
   const [mediaRecorderReady, setMediaRecorderReady] = useState(false);
@@ -837,6 +1021,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   const analyserRef = useRef(null);
   const streamRef = useRef(null);
   const rafRef = useRef(null);
+  const analyzeTimerRef = useRef(null);
   const wakeLockRef = useRef(null);
   const detectorRef = useRef({ activeFrames: 0, lastDetectedAt: 0 });
   const frequencyRef = useRef(null);
@@ -956,6 +1141,33 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       .sort((a, b) => new Date(b.session.startedAt || b.samples[0]?.capturedAt || 0) - new Date(a.session.startedAt || a.samples[0]?.capturedAt || 0));
   }, [samples, sessions]);
 
+  const sessionDateGroups = useMemo(() => {
+    const byDate = new Map();
+    for (const group of groupedSessions) {
+      const key = getSessionDateKey(group.session.startedAt || group.samples[0]?.capturedAt || new Date());
+      if (!byDate.has(key)) {
+        byDate.set(key, {
+          key,
+          label: formatSessionDateLabel(key),
+          subLabel: formatSessionWeekday(key),
+          groups: []
+        });
+      }
+      byDate.get(key).groups.push(group);
+    }
+
+    return [...byDate.values()]
+      .map((group) => ({
+        ...group,
+        groups: group.groups.sort(
+          (a, b) =>
+            new Date(b.session.startedAt || b.samples[0]?.capturedAt || 0) -
+            new Date(a.session.startedAt || a.samples[0]?.capturedAt || 0)
+        )
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key));
+  }, [groupedSessions]);
+
   const clusterStatsById = useMemo(() => {
     const map = new Map();
     for (const stat of analysis.clusterStats || []) {
@@ -969,9 +1181,30 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     return samples.find((sample) => sample.id === player.sampleId) || (lastSample?.id === player.sampleId ? lastSample : null);
   }, [lastSample, player.sampleId, samples]);
 
+  const detailSessionGroup = useMemo(
+    () => groupedSessions.find((group) => group.session.id === detailSessionId) || null,
+    [detailSessionId, groupedSessions]
+  );
+
   useEffect(() => {
     timelineEventsRef.current = timelineEvents;
   }, [timelineEvents]);
+
+  useEffect(() => {
+    if (!sessionDateGroups.length) {
+      setSelectedSessionDateKey("");
+      return;
+    }
+    if (!sessionDateGroups.some((group) => group.key === selectedSessionDateKey)) {
+      setSelectedSessionDateKey(sessionDateGroups[0].key);
+    }
+  }, [selectedSessionDateKey, sessionDateGroups]);
+
+  useEffect(() => {
+    if (detailSessionId && !groupedSessions.some((group) => group.session.id === detailSessionId)) {
+      setDetailSessionId("");
+    }
+  }, [detailSessionId, groupedSessions]);
 
   useEffect(() => {
     sensitivityRef.current = sensitivity;
@@ -996,6 +1229,23 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!listening) return undefined;
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        requestWakeLock();
+        if (audioContextRef.current?.state === "suspended") {
+          audioContextRef.current.resume().catch(() => {});
+        }
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listening]);
 
   async function loadMeyda() {
     if (meydaRef.current) return;
@@ -1049,6 +1299,10 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
+    }
+    if (analyzeTimerRef.current) {
+      clearTimeout(analyzeTimerRef.current);
+      analyzeTimerRef.current = null;
     }
     stopRecorder();
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -1131,12 +1385,11 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       filterCountersRef.current = { humanVoice: 0, steadyNoise: 0, merged: 0, clipQuota: 0 };
       setFilterStats(filterCountersRef.current);
       noiseBaselineRef.current = 0.025;
-
       startRecorder(stream);
       setListening(true);
-      setPermissionState("正在前台收集");
+      setPermissionState("低功耗监听中");
       requestWakeLock();
-      rafRef.current = requestAnimationFrame(analyzeFrame);
+      scheduleAnalysis(0);
     } catch (requestError) {
       setError(requestError?.message || "麦克风权限获取失败。");
       setPermissionState("权限失败");
@@ -1305,9 +1558,21 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     }
   }
 
+  function scheduleAnalysis(delay = ANALYZE_INTERVAL_MS) {
+    if (analyzeTimerRef.current) clearTimeout(analyzeTimerRef.current);
+    analyzeTimerRef.current = window.setTimeout(() => {
+      analyzeTimerRef.current = null;
+      rafRef.current = requestAnimationFrame(analyzeFrame);
+    }, delay);
+  }
+
   function analyzeFrame() {
+    if (!analyserRef.current) return;
     const features = extractFeatures();
-    if (!features) return;
+    if (!features) {
+      scheduleAnalysis();
+      return;
+    }
 
     const decision = getBarkFrameDecision(features, sensitivityRef.current, noiseBaselineRef.current);
     const score = decision.score;
@@ -1328,7 +1593,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     }
 
     const now = Date.now();
-    if (now - lastUiUpdateRef.current > 160) {
+    if (now - lastUiUpdateRef.current > UI_UPDATE_INTERVAL_MS) {
       lastUiUpdateRef.current = now;
       setLevel(features.rms);
       setBarkScore(score);
@@ -1354,7 +1619,8 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       }
     }
 
-    rafRef.current = requestAnimationFrame(analyzeFrame);
+    const nextDelay = document.hidden ? HIDDEN_ANALYZE_INTERVAL_MS : ANALYZE_INTERVAL_MS;
+    scheduleAnalysis(nextDelay);
   }
 
   async function labelSample(sample, reason) {
@@ -1512,35 +1778,79 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       // Some mobile browsers reject currentTime before metadata is loaded.
     }
 
-    setPlayer({ sampleId: sample.id, src: "", status: "loading", error: "" });
+      setPlayer({ sampleId: sample.id, src: "", status: "loading", error: "" });
 
     try {
-      if (playerObjectUrlRef.current) URL.revokeObjectURL(playerObjectUrlRef.current);
-      playerObjectUrlRef.current = "";
-      audio.src = audioSrc;
-      audio.load();
-
-      const playPromise = audio.play();
-      if (!playPromise?.catch) {
-        setPlayer({ sampleId: sample.id, src: audioSrc, status: "playing", error: "" });
-        return;
+      // Revoke previous blob URL
+      if (playerObjectUrlRef.current) {
+        URL.revokeObjectURL(playerObjectUrlRef.current);
+        playerObjectUrlRef.current = "";
       }
 
-      await playPromise;
-      setPlayer({ sampleId: sample.id, src: audioSrc, status: "playing", error: "" });
+      // Fetch audio as Blob first, then create Object URL.
+      // This avoids iOS Safari autoplay restrictions because the audio element
+      // gets a fully loaded blob:// src instead of a streaming network URL.
+      // It also fixes cross-origin and content-type negotiation issues.
+      let blobUrl = "";
+      try {
+        const fetchResponse = await fetch(audioSrc);
+        if (fetchResponse.ok) {
+          const contentType = fetchResponse.headers.get("content-type") || sample.audioContentType || "";
+          const audioBuffer = await fetchResponse.arrayBuffer();
+          if (audioBuffer.byteLength > 0) {
+            const blob = contentType ? new Blob([audioBuffer], { type: contentType }) : new Blob([audioBuffer]);
+            blobUrl = URL.createObjectURL(blob);
+            playerObjectUrlRef.current = blobUrl;
+          }
+        }
+      } catch {
+        // Fall through to direct src assignment
+      }
+
+      const resolvedSrc = blobUrl || audioSrc;
+      audio.src = resolvedSrc;
+      audio.load();
+
+      // Wait for enough data before attempting play
+      await new Promise((resolve, reject) => {
+        const onReady = () => { cleanup(); resolve(); };
+        const onError = () => { cleanup(); reject(audio.error || new Error("载入失败")); };
+        const cleanup = () => {
+          audio.removeEventListener("canplaythrough", onReady);
+          audio.removeEventListener("canplay", onReady);
+          audio.removeEventListener("error", onError);
+          clearTimeout(timeout);
+        };
+        // If already ready (e.g. cached blob), resolve immediately
+        if (audio.readyState >= 3) { resolve(); return; }
+        audio.addEventListener("canplaythrough", onReady, { once: true });
+        audio.addEventListener("canplay", onReady, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+        const timeout = setTimeout(() => {
+          cleanup();
+          // Try to play anyway after timeout
+          resolve();
+        }, 5000);
+      });
+
+      const playPromise = audio.play();
+      if (playPromise?.catch) {
+        await playPromise;
+      }
+      setPlayer({ sampleId: sample.id, src: resolvedSrc, status: "playing", error: "" });
     } catch (playError) {
       const message = getAudioErrorText(audio, playError);
       const diagnostic = await getAudioRouteDiagnostic(audioSrc);
       setPlayer({
         sampleId: sample.id,
-        src: audioSrc,
+        src: audio.src || audioSrc,
         status: audio.error ? "error" : "ready",
         error: [message || playError?.message || "音频片段读取失败。", diagnostic].filter(Boolean).join(" ")
       });
     }
   }
 
-  const statusText = listening ? (savingSample ? "保存片段中" : "前台收集中") : permissionState;
+  const statusText = listening ? (savingSample ? "保存片段中" : "低功耗监听中") : permissionState;
   const topSample = lastSample || samples[0];
 
   return (
@@ -1560,7 +1870,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
         <div>
           <Activity size={16} />
           <strong>{statusText}</strong>
-          <span>{wakeLockActive ? "屏幕保持唤醒" : "前台监听"}</span>
+          <span>{wakeLockActive ? "屏幕唤醒保护" : "锁屏后由浏览器决定"}</span>
         </div>
         <label>
           灵敏度
@@ -1606,7 +1916,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
           {error ? <p className="formError">{error}</p> : null}
           <div className="barkGuardrail">
             <ShieldCheck size={16} />
-            <span>已过滤 {filterStats.humanVoice} 帧人声倾向、{filterStats.steadyNoise} 帧稳定噪音；连续叫声合并 {filterStats.merged} 次。</span>
+            <span>低频采样降低发热；明显爆发声优先收集。已过滤 {filterStats.humanVoice} 帧人声倾向、{filterStats.steadyNoise} 帧稳定噪音；连续叫声合并 {filterStats.merged} 次。</span>
           </div>
 
           <div className="barkLatestBlock">
@@ -1648,12 +1958,13 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
               <strong>{activePlayerSample ? formatDateTime(activePlayerSample.capturedAt) : "选择一个片段"}</strong>
               <span>{player.status === "playing" ? "播放中" : player.status === "loading" ? "载入中" : player.status === "error" ? "播放失败" : "可手动播放"}</span>
             </div>
-            {player.src ? <a href={player.src} target="_blank" rel="noreferrer">打开原音频</a> : null}
+          {player.src ? <a href={player.src} target="_blank" rel="noreferrer">打开原音频</a> : null}
             <audio
               ref={audioRef}
               className="barkNativePlayer"
               controls
-              preload="metadata"
+              preload="auto"
+              playsInline
               onCanPlay={() => setPlayer((current) => (current.sampleId && current.status !== "playing" ? { ...current, status: "ready" } : current))}
               onPlay={() => setPlayer((current) => (current.sampleId ? { ...current, status: "playing" } : current))}
               onPause={() => setPlayer((current) => (current.sampleId ? { ...current, status: "idle" } : current))}
@@ -1663,21 +1974,15 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
           </div>
           {player.error ? <p className="formError">{player.error}</p> : null}
           <div className="barkClusterList">
-            {groupedSessions.length ? (
-              groupedSessions.map(({ session, samples: sessionSamples }) => (
-                <SessionCard
-                  session={session}
-                  samples={sessionSamples}
-                  key={session.id}
-                  onLabel={labelSample}
-                  onPlay={playSample}
-                  player={player}
-                  labelOptions={labelOptions}
-                />
-              ))
-            ) : (
-              <p className="mutedText">还没有声音样本。建议先用“降误报”监听一段时间，再回来看声纹段。</p>
-            )}
+            <CompactSessionList
+              dateGroups={sessionDateGroups}
+              selectedDateKey={selectedSessionDateKey}
+              onSelectDateKey={setSelectedSessionDateKey}
+              onOpenDetail={setDetailSessionId}
+              onPlay={playSample}
+              player={player}
+              labelOptions={labelOptions}
+            />
           </div>
           {groupedClusters.length ? (
             <details className="barkClusterArchive">
@@ -1698,6 +2003,14 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
               </div>
             </details>
           ) : null}
+          <SessionDetailPopup
+            group={detailSessionGroup}
+            onClose={() => setDetailSessionId("")}
+            onLabel={labelSample}
+            onPlay={playSample}
+            player={player}
+            labelOptions={labelOptions}
+          />
         </section>
         <LocalTrainingPanel
           state={localTraining}

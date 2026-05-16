@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createTimelineEvent, deleteTimelineEvent, listTimelineEvents } from "@/lib/pet-store";
+import { createTimelineEvent, deleteTimelineEvent, listTimelineEvents, updateTimelineEvent } from "@/lib/pet-store";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,21 @@ export async function POST(request) {
   }
 
   const result = await createTimelineEvent(body);
+  return NextResponse.json(result);
+}
+
+export async function PATCH(request) {
+  const body = await request.json();
+  const id = body.id;
+
+  if (!id) {
+    return NextResponse.json({ message: "id is required" }, { status: 400 });
+  }
+
+  const result = await updateTimelineEvent(id, body);
+  if (!result.event) {
+    return NextResponse.json({ message: "event not found" }, { status: 404 });
+  }
   return NextResponse.json(result);
 }
 

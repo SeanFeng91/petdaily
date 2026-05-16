@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AudioWaveform,
   Bell,
@@ -15,6 +15,7 @@ import {
   HeartPulse,
   Home,
   LineChart,
+  Moon,
   PauseCircle,
   Pencil,
   PawPrint,
@@ -24,6 +25,7 @@ import {
   Settings,
   SkipForward,
   Sparkles,
+  Sprout,
   Syringe,
   Trash2,
   Utensils
@@ -42,6 +44,7 @@ import zhCN from "antd-mobile/es/locales/zh-CN";
 import { ExpenseChart, WeightChart } from "@/components/charts-panel";
 import BarkMonitorPanel from "@/components/bark-monitor";
 import QuickRecordSheet from "@/components/quick-record-sheet";
+import { compressImageFile } from "@/components/image-file";
 import {
   EVENT_TYPES,
   EXPENSE_CATEGORIES,
@@ -70,7 +73,29 @@ const eventIcons = {
   NOTE: BookOpen
 };
 
+const eventDisplayTypes = {
+  FOOD: "point",
+  POTTY: "point",
+  STOOL: "point",
+  WEIGHT: "point",
+  VACCINE: "point",
+  DEWORM: "point",
+  PHOTO: "point",
+  BARK: "range",
+  NOTE: "range"
+};
+
+const timelinePlotRows = [
+  { id: "sleep", label: "睡觉", icon: Moon, types: new Set(["NOTE"]), tone: "sleep", matcher: /睡|午睡|休息|安静|笼/i },
+  { id: "food", label: "进食", icon: Utensils, types: new Set(["FOOD"]), tone: "food" },
+  { id: "potty", label: "尿尿", icon: PawPrint, types: new Set(["POTTY"]), tone: "pee" },
+  { id: "stool", label: "便便", icon: PawPrint, types: new Set(["STOOL"]), tone: "poop" },
+  { id: "play", label: "玩耍", icon: Sprout, types: new Set(["NOTE"]), tone: "play", matcher: /玩|训练|游戏|外出|散步/i },
+  { id: "care", label: "护理", icon: HeartPulse, types: new Set(["WEIGHT", "VACCINE", "DEWORM", "PHOTO", "BARK"]), tone: "care" }
+];
+
 const SHORTCUT_STORAGE_KEY = "petdaily.eventShortcuts.v1";
+const APP_ICON_STORAGE_KEY = "petdaily.appIcon.v1";
 
 const defaultEventShortcuts = [
   { id: "breakfast", enabled: true, label: "早餐", type: "FOOD", title: "早餐完成", amount: "45", note: "" },
@@ -82,6 +107,20 @@ const defaultEventShortcuts = [
   { id: "vaccine", enabled: false, label: "疫苗", type: "VACCINE", title: "疫苗记录", amount: "", note: "" },
   { id: "deworm", enabled: false, label: "驱虫", type: "DEWORM", title: "驱虫记录", amount: "", note: "" }
 ];
+
+function updateAppIconLinks(iconUrl) {
+  if (typeof document === "undefined" || !iconUrl) return;
+  const selectors = ['link[rel="icon"]', 'link[rel="apple-touch-icon"]'];
+  for (const selector of selectors) {
+    let link = document.querySelector(selector);
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = selector.includes("apple") ? "apple-touch-icon" : "icon";
+      document.head.appendChild(link);
+    }
+    link.href = iconUrl;
+  }
+}
 
 function normalizeShortcuts(value) {
   if (!Array.isArray(value)) return defaultEventShortcuts;
@@ -215,7 +254,7 @@ function buildTimelineDayGroups(events) {
       key,
       label: formatDateKeyLabel(key),
       subLabel: formatDateKeyWeekday(key),
-      events: groupEvents.sort((a, b) => new Date(b.happenedAt) - new Date(a.happenedAt))
+      events: groupEvents.sort((a, b) => new Date(a.happenedAt) - new Date(b.happenedAt))
     }))
     .sort((a, b) => b.key.localeCompare(a.key));
 
@@ -250,6 +289,87 @@ function formatTimelineTime(value) {
     minute: "2-digit",
     hour12: false
   }).format(new Date(value));
+}
+
+function parseJsonObject(value) {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getEventMetadata(event) {
+  return parseJsonObject(event?.metadata);
+}
+
+function getEventEndTime(event) {
+  const metadata = getEventMetadata(event);
+  const start = new Date(event.happenedAt).getTime();
+  const explicitEnd = metadata.endedAt ? new Date(metadata.endedAt).getTime() : null;
+  if (Number.isFinite(explicitEnd) && explicitEnd > start) return explicitEnd;
+
+  const durationMs = Number(metadata.durationMs || event.durationMs || 0);
+  if (Number.isFinite(durationMs) && durationMs > 0) return start + durationMs;
+
+  const createdAt = event.createdAt ? new Date(event.createdAt).getTime() : null;
+  if (event.type === "NOTE" && Number.isFinite(createdAt) && createdAt > start + 10 * 60000) return createdAt;
+
+  if (eventDisplayTypes[event.type] === "range") {
+    return start + (event.type === "BARK" ? 6 * 60000 : 30 * 60000);
+  }
+
+  return start;
+}
+
+function hasEventTimeRange(event) {
+  if (!event) return false;
+  const metadata = getEventMetadata(event);
+  return eventDisplayTypes[event.type] === "range" || Boolean(metadata.endedAt || metadata.durationMs || event.durationMs);
+}
+
+function getEventEndInputValue(event) {
+  if (!event || !hasEventTimeRange(event)) return "";
+  const start = new Date(event.happenedAt).getTime();
+  const end = getEventEndTime(event);
+  return Number.isFinite(end) && end > start ? localDateTimeValue(end) : "";
+}
+
+function formatEventRange(event) {
+  if (!event) return "";
+  const start = new Date(event.happenedAt);
+  const end = new Date(getEventEndTime(event));
+  if (!hasEventTimeRange(event) || !Number.isFinite(end.getTime()) || end.getTime() <= start.getTime()) {
+    return formatDateTime(event.happenedAt);
+  }
+  const sameDay = start.toDateString() === end.toDateString();
+  return sameDay
+    ? `${formatDateTime(start)} - ${formatTimelineTime(end)}`
+    : `${formatDateTime(start)} - ${formatDateTime(end)}`;
+}
+
+function getTimelinePlotRow(event) {
+  const title = `${event.title || ""} ${event.note || ""}`;
+  return (
+    timelinePlotRows.find((row) => {
+      if (!row.types.has(event.type)) return false;
+      return row.matcher ? row.matcher.test(title) : true;
+    }) || timelinePlotRows[timelinePlotRows.length - 1]
+  );
+}
+
+function getDayProgress(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return 0;
+  return ((date.getHours() * 60 + date.getMinutes()) / 1440) * 100;
+}
+
+function getDayWindowLabel(index) {
+  const hour = String(index * 4).padStart(2, "0");
+  return `${hour}:00`;
 }
 
 function getDerivedData(data) {
@@ -358,7 +478,7 @@ function CoachPanel({ pet, localCoach, latestInsight, onGenerate, loading }) {
   );
 }
 
-function TimelineStream({ events, onDelete, onOpenPhoto }) {
+function TimelineStream({ events, onDelete, onOpenDetail, onOpenPhoto }) {
   const groups = useMemo(() => {
     const grouped = [];
     const index = new Map();
@@ -409,11 +529,20 @@ function TimelineStream({ events, onDelete, onOpenPhoto }) {
                           {event.unit || meta.unit}
                         </b>
                       ) : null}
-                      {onDelete ? (
-                        <button className="miniDangerButton" type="button" onClick={() => onDelete(event)}>
-                          <Trash2 size={15} />
-                          删除
-                        </button>
+                      {onOpenDetail || onDelete ? (
+                        <div className="timelineEntryActions">
+                          {onOpenDetail ? (
+                            <button className="miniActionButton" type="button" onClick={() => onOpenDetail(event)}>
+                              详情
+                            </button>
+                          ) : null}
+                          {onDelete ? (
+                            <button className="miniDangerButton" type="button" onClick={() => onDelete(event)}>
+                              <Trash2 size={15} />
+                              删除
+                            </button>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
                     {event.note ? <p>{event.note}</p> : null}
@@ -434,6 +563,30 @@ function TimelineStream({ events, onDelete, onOpenPhoto }) {
         </section>
       ))}
     </div>
+  );
+}
+
+function DesktopDayDistribution({ events, onOpenDetail }) {
+  const { label, dayEvents } = useMemo(() => {
+    const todayKey = getTodayDateKey();
+    const groups = buildTimelineDayGroups(events);
+    const todayGroup = groups.find((group) => group.key === todayKey && group.events.length);
+    const fallbackGroup = groups.find((group) => group.events.length);
+    const group = todayGroup || fallbackGroup;
+    return {
+      label: group ? `${group.label} · ${group.subLabel}` : "暂无记录",
+      dayEvents: group ? [...group.events].sort((a, b) => new Date(a.happenedAt) - new Date(b.happenedAt)) : []
+    };
+  }, [events]);
+
+  return (
+    <section className="contentPanel desktopDayDistribution">
+      <div className="sectionHeading">
+        <p>日分布</p>
+        <span>{label}</span>
+      </div>
+      <DayDistributionTimeline events={dayEvents} onOpenDetail={onOpenDetail} />
+    </section>
   );
 }
 
@@ -535,10 +688,77 @@ function getCompactReminderList(reminders) {
     .slice(0, 2);
 }
 
-function MobileEventDetailPopup({ event, onClose, onDelete, onOpenPhoto }) {
+function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto }) {
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editStartAt, setEditStartAt] = useState("");
+  const [editEndAt, setEditEndAt] = useState("");
+  const [editError, setEditError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (event) {
+      setEditTitle(event.title || "");
+      setEditNote(event.note || "");
+      setEditAmount(event.amount != null ? String(event.amount) : "");
+      setEditStartAt(localDateTimeValue(event.happenedAt));
+      setEditEndAt(getEventEndInputValue(event));
+      setEditError("");
+      setEditing(false);
+    }
+  }, [event]);
+
   if (!event) return null;
   const Icon = eventIcons[event.type] || BookOpen;
   const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
+  const supportsRange = hasEventTimeRange(event);
+  const showAmountField = event.amount != null || Boolean(meta.unit);
+
+  async function saveEdit() {
+    if (!onEdit) return;
+    const startAt = new Date(editStartAt);
+    if (!Number.isFinite(startAt.getTime())) {
+      setEditError("开始时间格式不正确。");
+      return;
+    }
+
+    const nextMetadata = { ...getEventMetadata(event) };
+    if (supportsRange) {
+      if (editEndAt) {
+        const endAt = new Date(editEndAt);
+        if (!Number.isFinite(endAt.getTime()) || endAt.getTime() <= startAt.getTime()) {
+          setEditError("结束时间需要晚于开始时间。");
+          return;
+        }
+        nextMetadata.endedAt = endAt.toISOString();
+        nextMetadata.durationMs = Math.max(60000, endAt.getTime() - startAt.getTime());
+      } else {
+        delete nextMetadata.endedAt;
+        delete nextMetadata.durationMs;
+      }
+    }
+
+    setEditError("");
+    setSaving(true);
+    try {
+      await onEdit({
+        id: event.id,
+        title: editTitle,
+        note: editNote,
+        amount: showAmountField ? editAmount : undefined,
+        happenedAt: startAt.toISOString(),
+        metadata: supportsRange ? nextMetadata : undefined
+      });
+      setEditing(false);
+      onClose?.();
+    } catch (error) {
+      setEditError(error?.message || "保存失败，请稍后再试。");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Popup
@@ -556,47 +776,144 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onOpenPhoto }) {
           </span>
           <div>
             <Tag color="primary" fill="outline">{meta.label}</Tag>
-            <h3>{event.title}</h3>
-            <p>{formatDateTime(event.happenedAt)}</p>
+            {editing ? (
+              <input className="mobileEventEditInput" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="标题" />
+            ) : (
+              <h3>{event.title}</h3>
+            )}
+            <p>{formatEventRange(event)}</p>
           </div>
         </div>
-        {event.amount ? (
-          <div className="mobileEventFact">
-            <span>数值</span>
-            <strong>
-              {event.amount}
-              {event.unit || meta.unit}
-            </strong>
-          </div>
-        ) : null}
-        {event.photoUrl ? (
-          <button
-            className="photoOpenButton mobileEventPhotoButton"
-            type="button"
-            onClick={() => onOpenPhoto?.({ url: event.photoUrl, title: event.title, takenAt: event.happenedAt })}
-          >
-            <img className="mobileEventDetailPhoto" src={event.photoUrl} alt={event.title} />
-          </button>
-        ) : null}
-        {event.note ? <p className="mobileEventDetailNote">{event.note}</p> : <p className="mutedText mobileEventDetailNote">这条记录暂时没有备注。</p>}
+        {editing ? (
+          <>
+            <div className="formGridTwo">
+              <label>
+                开始
+                <input className="mobileEventEditInput" type="datetime-local" value={editStartAt} onChange={(e) => setEditStartAt(e.target.value)} />
+              </label>
+              {supportsRange ? (
+                <label>
+                  结束
+                  <input className="mobileEventEditInput" type="datetime-local" value={editEndAt} onChange={(e) => setEditEndAt(e.target.value)} />
+                </label>
+              ) : null}
+            </div>
+            {showAmountField ? (
+              <div className="mobileEventFact">
+                <span>数值</span>
+                <input className="mobileEventEditInput small" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="数值" inputMode="decimal" />
+              </div>
+            ) : null}
+            <textarea className="mobileEventEditTextarea" value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="备注" rows={3} />
+            {editError ? <p className="formError">{editError}</p> : null}
+          </>
+        ) : (
+          <>
+            <div className="mobileEventFact">
+              <span>{supportsRange ? "时段" : "时间"}</span>
+              <strong>{formatEventRange(event)}</strong>
+            </div>
+            {event.amount != null ? (
+              <div className="mobileEventFact">
+                <span>数值</span>
+                <strong>{event.amount}{event.unit || meta.unit}</strong>
+              </div>
+            ) : null}
+            {event.photoUrl ? (
+              <button className="photoOpenButton mobileEventPhotoButton" type="button" onClick={() => onOpenPhoto?.({ url: event.photoUrl, title: event.title, takenAt: event.happenedAt })}>
+                <img className="mobileEventDetailPhoto" src={event.photoUrl} alt={event.title} />
+              </button>
+            ) : null}
+            {event.note ? <p className="mobileEventDetailNote">{event.note}</p> : <p className="mutedText mobileEventDetailNote">这条记录暂时没有备注。</p>}
+          </>
+        )}
         <div className="mobileEventDetailActions">
-          <MobileButton block fill="outline" onClick={onClose}>关闭</MobileButton>
-          {onDelete ? (
-            <MobileButton
-              block
-              color="danger"
-              fill="outline"
-              onClick={() => {
-                onClose();
-                onDelete(event);
-              }}
-            >
-              删除
-            </MobileButton>
-          ) : null}
+          {editing ? (
+            <>
+              <MobileButton block fill="outline" onClick={() => setEditing(false)}>取消</MobileButton>
+              <MobileButton block color="primary" onClick={saveEdit} disabled={saving}>{saving ? "保存中" : "保存"}</MobileButton>
+            </>
+          ) : (
+            <>
+              {onEdit ? <MobileButton block fill="outline" onClick={() => setEditing(true)}><Pencil size={14} /> 编辑</MobileButton> : null}
+              {onDelete ? (
+                <MobileButton block color="danger" fill="outline" onClick={() => { onClose(); onDelete(event); }}>删除</MobileButton>
+              ) : null}
+              <MobileButton block fill="outline" onClick={onClose}>关闭</MobileButton>
+            </>
+          )}
         </div>
       </div>
     </Popup>
+  );
+}
+
+function DayDistributionTimeline({ events, onOpenDetail }) {
+  if (!events.length) {
+    return <p className="mutedText mobileEmptyText">这个日期还没有形成分布。新增记录后会自动排到一天刻度上。</p>;
+  }
+
+  const rows = timelinePlotRows.map((row) => ({
+    ...row,
+    events: events
+      .filter((event) => getTimelinePlotRow(event).id === row.id)
+      .sort((a, b) => new Date(a.happenedAt) - new Date(b.happenedAt))
+  }));
+
+  return (
+    <div className="dayDistribution" aria-label="一天事件分布">
+      <div className="dayDistributionScale" aria-hidden="true">
+        {Array.from({ length: 7 }, (_, index) => (
+          <span key={index} style={{ left: `${(index / 6) * 100}%` }}>
+            {getDayWindowLabel(index)}
+          </span>
+        ))}
+      </div>
+      <div className="dayDistributionGrid">
+        {rows.map((row) => {
+          const RowIcon = row.icon;
+          return (
+            <div className={`dayDistributionRow tone-${row.tone}`} key={row.id}>
+              <div className="dayDistributionLabel">
+                <RowIcon size={14} />
+                <span>{row.label}</span>
+              </div>
+              <div className="dayDistributionTrack">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <i key={index} style={{ left: `${(index / 6) * 100}%` }} />
+                ))}
+                {row.events.map((event) => {
+                  const start = new Date(event.happenedAt).getTime();
+                  const end = getEventEndTime(event);
+                  const left = getDayProgress(event.happenedAt);
+                  const endDate = new Date(end);
+                  const right = Math.max(left, getDayProgress(endDate));
+                  const isRange = right - left >= 1.5;
+
+                  return (
+                    <button
+                      className={`dayDistributionMark ${isRange ? "range" : "point"}`}
+                      type="button"
+                      key={event.id}
+                      style={isRange ? { left: `${left}%`, width: `${Math.max(3, right - left)}%` } : { left: `${left}%` }}
+                      onClick={() => onOpenDetail?.(event)}
+                      aria-label={`${formatTimelineTime(event.happenedAt)} ${event.title}`}
+                      title={`${formatTimelineTime(event.happenedAt)} ${event.title}`}
+                    >
+                      <span>{event.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="dayDistributionLegend">
+        <span><i className="point" />点状事件</span>
+        <span><i className="range" />持续片段</span>
+      </div>
+    </div>
   );
 }
 
@@ -664,11 +981,13 @@ function MobileTodayView({
   onSkipReminder,
   onToggleReminder,
   onDeleteEvent,
+  onEditEvent,
   onOpenPhoto
 }) {
   const dateGroups = useMemo(() => buildTimelineDayGroups(derived.timelineEvents), [derived.timelineEvents]);
   const [selectedDateKey, setSelectedDateKey] = useState("");
   const [detailEvent, setDetailEvent] = useState(null);
+  const [timelineMode, setTimelineMode] = useState("list");
   const selectedGroup = dateGroups.find((group) => group.key === selectedDateKey) || dateGroups[0];
   const compactReminders = getCompactReminderList(data.reminders);
 
@@ -721,8 +1040,16 @@ function MobileTodayView({
       <section className="mobileTimelineCard">
         <div className="mobileTimelineTools">
           <div>
-            <strong>事件流</strong>
+            <strong>{timelineMode === "list" ? "事件流" : "日分布"}</strong>
             <span>{selectedGroup?.events.length || 0} 条</span>
+          </div>
+          <div className="mobileTimelineMode">
+            <button className={timelineMode === "list" ? "selected" : ""} type="button" onClick={() => setTimelineMode("list")}>
+              列表
+            </button>
+            <button className={timelineMode === "map" ? "selected" : ""} type="button" onClick={() => setTimelineMode("map")}>
+              分布
+            </button>
           </div>
           <CapsuleTabs
             className="mobileDateTabs"
@@ -742,17 +1069,22 @@ function MobileTodayView({
             ))}
           </CapsuleTabs>
         </div>
-        <MobileTimelineList
-          events={selectedGroup?.events || []}
-          onDelete={onDeleteEvent}
-          onOpenDetail={setDetailEvent}
-          onOpenPhoto={onOpenPhoto}
-        />
+        {timelineMode === "map" ? (
+          <DayDistributionTimeline events={selectedGroup?.events || []} onOpenDetail={setDetailEvent} />
+        ) : (
+          <MobileTimelineList
+            events={[...(selectedGroup?.events || [])].sort((a, b) => new Date(b.happenedAt) - new Date(a.happenedAt))}
+            onDelete={onDeleteEvent}
+            onOpenDetail={setDetailEvent}
+            onOpenPhoto={onOpenPhoto}
+          />
+        )}
       </section>
       <MobileEventDetailPopup
         event={detailEvent}
         onClose={() => setDetailEvent(null)}
         onDelete={onDeleteEvent}
+        onEdit={onEditEvent}
         onOpenPhoto={onOpenPhoto}
       />
     </section>
@@ -776,6 +1108,7 @@ function TodayView({
 }) {
   const { pet, localCoach, insights } = data;
   const [typeFilter, setTypeFilter] = useState("ALL");
+  const [detailEvent, setDetailEvent] = useState(null);
   const latestInsight = insights[0];
   const filteredEvents = useMemo(
     () =>
@@ -800,6 +1133,8 @@ function TodayView({
           onTrigger={onShortcutTrigger}
           onConfigure={onConfigureShortcuts}
         />
+
+        <DesktopDayDistribution events={derived.timelineEvents} onOpenDetail={setDetailEvent} />
 
         <div className="timelineLayout">
           <section className="timelinePanel">
@@ -828,7 +1163,7 @@ function TodayView({
                 ))}
               </div>
             </div>
-            <TimelineStream events={filteredEvents} onDelete={onDeleteEvent} onOpenPhoto={onOpenPhoto} />
+            <TimelineStream events={filteredEvents} onDelete={onDeleteEvent} onOpenDetail={setDetailEvent} onOpenPhoto={onOpenPhoto} />
           </section>
 
           <aside className="timelineAside">
@@ -860,6 +1195,14 @@ function TodayView({
         onSkipReminder={onSkipReminder}
         onToggleReminder={onToggleReminder}
         onDeleteEvent={onDeleteEvent}
+        onEditEvent={onEditTimeline}
+        onOpenPhoto={onOpenPhoto}
+      />
+      <MobileEventDetailPopup
+        event={detailEvent}
+        onClose={() => setDetailEvent(null)}
+        onDelete={onDeleteEvent}
+        onEdit={onEditTimeline}
         onOpenPhoto={onOpenPhoto}
       />
     </>
@@ -1188,18 +1531,34 @@ function ShortcutSettings({ shortcuts, onChange, onReset }) {
 }
 
 function ProfileForm({ pet, onSave }) {
+  const avatarInputRef = useRef(null);
   const [form, setForm] = useState({
     name: pet.name,
     breed: pet.breed,
     sex: pet.sex,
     birthday: pet.birthday.slice(0, 10),
+    avatarUrl: pet.avatarUrl || "",
     currentWeight: pet.currentWeight || "",
     notes: pet.notes || ""
   });
   const [saving, setSaving] = useState(false);
+  const [avatarProcessing, setAvatarProcessing] = useState(false);
 
   function update(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function selectAvatar(file) {
+    if (!file) return;
+    setAvatarProcessing(true);
+    try {
+      const dataUrl = await compressImageFile(file);
+      update("avatarUrl", dataUrl);
+      window.localStorage.setItem(APP_ICON_STORAGE_KEY, dataUrl);
+      updateAppIconLinks(dataUrl);
+    } finally {
+      setAvatarProcessing(false);
+    }
   }
 
   async function submit(event) {
@@ -1207,6 +1566,10 @@ function ProfileForm({ pet, onSave }) {
     setSaving(true);
     try {
       await onSave({ id: pet.id, ...form });
+      if (form.avatarUrl) {
+        window.localStorage.setItem(APP_ICON_STORAGE_KEY, form.avatarUrl);
+        updateAppIconLinks(form.avatarUrl);
+      }
     } finally {
       setSaving(false);
     }
@@ -1214,6 +1577,27 @@ function ProfileForm({ pet, onSave }) {
 
   return (
     <form className="profileForm" onSubmit={submit}>
+      <input
+        ref={avatarInputRef}
+        className="hiddenFileInput"
+        type="file"
+        accept="image/*"
+        onChange={(event) => {
+          selectAvatar(event.target.files?.[0]);
+          event.target.value = "";
+        }}
+      />
+      <div className="avatarConfigurator">
+        <img src={form.avatarUrl || "/icons/petdaily-icon-192.png"} alt={`${form.name || pet.name} 桌面图标预览`} />
+        <div>
+          <strong>桌面快捷图标</strong>
+          <span>保存后会同步宠物头像和本机快捷图标预览；已添加到主屏幕的图标可能需要重新添加一次。</span>
+          <button className="secondaryButton" type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarProcessing}>
+            <Camera size={16} />
+            {avatarProcessing ? "处理中" : "选择宠物图"}
+          </button>
+        </div>
+      </div>
       <label>
         名字
         <input value={form.name} onChange={(event) => update("name", event.target.value)} />
@@ -1232,6 +1616,10 @@ function ProfileForm({ pet, onSave }) {
       <label>
         生日
         <input type="date" value={form.birthday} onChange={(event) => update("birthday", event.target.value)} />
+      </label>
+      <label className="wideField">
+        头像 / 快捷图标 URL
+        <input value={form.avatarUrl} onChange={(event) => update("avatarUrl", event.target.value)} placeholder="/photos/westie-portrait.svg" />
       </label>
       <label>
         当前体重 kg
@@ -1336,6 +1724,12 @@ export default function PetDailyApp({ initialData }) {
     if (!shortcutsLoaded) return;
     window.localStorage.setItem(SHORTCUT_STORAGE_KEY, JSON.stringify(eventShortcuts));
   }, [eventShortcuts, shortcutsLoaded]);
+
+  useEffect(() => {
+    const storedIcon = window.localStorage.getItem(APP_ICON_STORAGE_KEY);
+    const iconUrl = storedIcon || data.pet?.avatarUrl;
+    if (iconUrl) updateAppIconLinks(iconUrl);
+  }, [data.pet?.avatarUrl]);
 
   useEffect(() => {
     function handleShortcutKey(event) {
@@ -1507,6 +1901,25 @@ export default function PetDailyApp({ initialData }) {
         weightRecords: nextWeightRecords
       };
     });
+  }
+
+  async function onEditTimeline(payload) {
+    const response = await fetch("/api/timeline", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error("Failed to update timeline event");
+    const { event, weightRecord, currentWeightKg } = await response.json();
+    setData((current) => ({
+      ...current,
+      pet: currentWeightKg == null ? current.pet : { ...current.pet, currentWeight: currentWeightKg },
+      weightRecords: weightRecord
+        ? sortWeightRecords(current.weightRecords.map((item) => (item.id === weightRecord.id ? weightRecord : item)))
+        : current.weightRecords,
+      timelineEvents: current.timelineEvents.map((item) => (item.id === event.id ? event : item))
+    }));
+    return event;
   }
 
   async function createExpense(payload) {

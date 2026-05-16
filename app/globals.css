@@ -285,6 +285,10 @@ img {
   align-items: start;
 }
 
+.desktopDayDistribution {
+  padding: 14px 16px;
+}
+
 .timelinePanel {
   min-height: calc(100svh - 132px);
   padding: 16px;
@@ -448,24 +452,39 @@ img {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .timelineEntryHeader strong {
+  min-width: 0;
   margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 14px;
 }
 
 .timelineEntryHeader b {
+  flex: 0 0 auto;
   color: var(--accent-dark);
   font-size: 13px;
 }
 
+.timelineEntryActions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .timelineEntryBody p {
   margin: 7px 0 0;
+  overflow: hidden;
   color: #34443d;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timelineType {
@@ -1258,6 +1277,45 @@ select:focus {
   gap: 10px;
 }
 
+.avatarConfigurator {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfdfc;
+}
+
+.avatarConfigurator img {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+
+.avatarConfigurator div {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  justify-items: start;
+}
+
+.avatarConfigurator strong {
+  font-size: 15px;
+}
+
+.avatarConfigurator span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
 .shortcutSettingItem {
   display: grid;
   grid-template-columns: 58px minmax(70px, 0.75fr) 124px minmax(120px, 1fr) 92px minmax(120px, 1fr);
@@ -1712,6 +1770,90 @@ label {
   color: var(--accent-dark);
 }
 
+.barkSessionCompactPanel {
+  display: grid;
+  gap: 8px;
+}
+
+.barkDateTabs {
+  --adm-color-primary: #16231e;
+}
+
+.barkDateTabs .adm-capsule-tabs-tab-list {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.barkDateTabs .adm-capsule-tabs-tab-list::-webkit-scrollbar {
+  display: none;
+}
+
+.barkDateTabs .adm-capsule-tabs-content {
+  display: none;
+}
+
+.barkSessionRows {
+  display: grid;
+  gap: 7px;
+}
+
+.barkSessionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfdfc;
+}
+
+.barkSessionRow.active {
+  border-color: rgba(23, 96, 71, 0.26);
+  box-shadow: 0 0 0 1px rgba(23, 96, 71, 0.06);
+}
+
+.barkSessionRowMain {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.barkSessionRowMain strong,
+.barkSessionRowMain span,
+.barkSessionRow em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barkSessionRowMain strong {
+  font-size: 14px;
+}
+
+.barkSessionRowMain span,
+.barkSessionRow em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 760;
+}
+
+.barkSessionRow b {
+  color: var(--accent-dark);
+  font-size: 15px;
+}
+
+.barkDetailSheet {
+  display: grid;
+  gap: 10px;
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+}
+
+.barkDetailPopup {
+  border-radius: 18px 18px 0 0;
+}
+
 .barkModelBadge.strong {
   background: #e8f3ee;
   color: #175b42;
@@ -1872,11 +2014,12 @@ label {
   grid-template-columns: 26px minmax(0, 1fr);
   gap: 6px;
   padding: 7px;
-  border: 1px solid rgba(72, 118, 211, 0.16);
+  border: 1px solid rgba(72, 118, 211, 0.22);
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 32%),
     #050f2f;
+  overflow: hidden;
 }
 
 .barkSpectrogramAxis {
@@ -1888,28 +2031,27 @@ label {
   font-weight: 760;
 }
 
-.barkSpectrogramGrid {
-  display: grid;
-  grid-template-columns: repeat(var(--spec-cols), minmax(2px, 1fr));
-  grid-template-rows: repeat(var(--spec-rows), minmax(3px, 1fr));
-  gap: 1px;
-  overflow: hidden;
+.barkSpectrogramCanvas {
+  width: 100%;
+  height: 100%;
+  min-height: 118px;
   border-radius: 6px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
-.barkSpectrogramGrid i {
-  background: hsl(calc(228 - var(--heat) * 76) 96% calc(20% + var(--heat) * 46%));
-  box-shadow: 0 0 calc(var(--heat) * 9px) hsl(calc(188 - var(--heat) * 40) 100% 58% / calc(var(--heat) * 0.52));
-  opacity: calc(0.24 + var(--heat) * 0.76);
+.barkSpectrogram .barkSpectrogramCanvas {
+  display: block;
 }
 
 .barkSpectrogramMode {
   position: absolute;
   right: 8px;
   bottom: 6px;
-  color: rgba(241, 250, 248, 0.62);
+  color: rgba(241, 250, 248, 0.72);
   font-size: 10px;
   font-weight: 780;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .barkVoiceprintDetails {
@@ -2771,6 +2913,148 @@ label {
   background: #2f8f6b;
 }
 
+.dayDistribution {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dayDistributionScale {
+  position: relative;
+  height: 18px;
+  margin-left: 68px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.dayDistributionScale span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.dayDistributionGrid {
+  display: grid;
+  gap: 6px;
+}
+
+.dayDistributionRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.dayDistributionLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dayDistributionTrack {
+  position: relative;
+  min-width: 0;
+  height: 30px;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(90deg, rgba(220, 230, 225, 0.9) 1px, transparent 1px) 0 0 / 16.666% 100%,
+    #f7faf8;
+}
+
+.dayDistributionTrack > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(102, 115, 109, 0.12);
+}
+
+.dayDistributionMark {
+  --mark-color: #2f8f6b;
+  position: absolute;
+  top: 50%;
+  min-width: 14px;
+  height: 14px;
+  border: 2px solid white;
+  border-radius: 999px;
+  padding: 0;
+  background: var(--mark-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--mark-color) 54%, transparent);
+  transform: translate(-50%, -50%);
+}
+
+.dayDistributionMark.range {
+  min-width: 20px;
+  max-width: 100%;
+  height: 12px;
+  border-width: 1px;
+  transform: translateY(-50%);
+}
+
+.dayDistributionMark span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 3px);
+  max-width: 120px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 760;
+  opacity: 0;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  transform: translateX(-50%);
+  transition: opacity 120ms ease;
+  white-space: nowrap;
+}
+
+.dayDistributionMark:focus-visible span,
+.dayDistributionMark:hover span {
+  opacity: 1;
+}
+
+.dayDistributionRow.tone-sleep .dayDistributionMark { --mark-color: #9a7a38; }
+.dayDistributionRow.tone-food .dayDistributionMark { --mark-color: #2f8f6b; }
+.dayDistributionRow.tone-pee .dayDistributionMark { --mark-color: #4876d3; }
+.dayDistributionRow.tone-poop .dayDistributionMark { --mark-color: #de5d83; }
+.dayDistributionRow.tone-play .dayDistributionMark { --mark-color: #176047; }
+.dayDistributionRow.tone-care .dayDistributionMark { --mark-color: #475569; }
+
+.dayDistributionLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.dayDistributionLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dayDistributionLegend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #4876d3;
+}
+
+.dayDistributionLegend i.range {
+  width: 22px;
+  height: 8px;
+  background: #9a7a38;
+}
+
 .mobileNav {
   display: none;
 }
@@ -2833,6 +3117,24 @@ label {
 .recordForm {
   display: grid;
   gap: 12px;
+}
+
+.notePresetStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -4px;
+}
+
+.notePresetStrip button {
+  min-height: 32px;
+  border: 1px solid #d7e4de;
+  border-radius: var(--radius);
+  padding: 0 9px;
+  background: #f4f8f6;
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 780;
 }
 
 .typeGrid {
@@ -3396,7 +3698,24 @@ label {
 
   html,
   body {
+    width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
+  }
+
+  .appShell,
+  .appMain,
+  .mobileTodayWorkbench,
+  .mobileTopBar,
+  .mobileReminderBlock,
+  .mobileTimelineCard,
+  .mobileTodayWorkbench .shortcutPanel,
+  .contentPanel,
+  .pageHeader,
+  .barkWorkspace,
+  .singleColumn {
+    min-width: 0;
+    max-width: 100%;
   }
 
   body {
@@ -3601,15 +3920,41 @@ label {
 
   .mobileTimelineTools {
     align-items: flex-start;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 6px;
   }
 
   .mobileTimelineTools > div:first-child {
-    width: 100%;
+    min-width: 0;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+  }
+
+  .mobileTimelineMode {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--mobile-radius);
+    background: #edf4f0;
+  }
+
+  .mobileTimelineMode button {
+    min-height: 28px;
+    border: 0;
+    border-radius: 7px;
+    padding: 0 9px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .mobileTimelineMode button.selected {
+    background: white;
+    color: var(--accent-dark);
+    box-shadow: 0 1px 4px rgba(25, 38, 31, 0.08);
   }
 
   .mobileFilterStrip {
@@ -4185,6 +4530,9 @@ label {
 
   .appMain {
     min-height: 100svh;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: clip;
     padding: 8px 8px calc(var(--mobile-nav-height) + 18px + env(safe-area-inset-bottom));
   }
 
@@ -4296,14 +4644,35 @@ label {
     gap: 6px;
   }
 
+  .mobileTimelineTools > div:first-child {
+    overflow: hidden;
+  }
+
+  .mobileTimelineTools > div:first-child span {
+    flex: 0 0 auto;
+  }
+
   .mobileDateTabs {
+    grid-column: 1 / -1;
     width: 100%;
+    min-width: 0;
     --adm-color-primary: #16231e;
+  }
+
+  .mobileDateTabs .adm-capsule-tabs-tab-list {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .mobileDateTabs .adm-capsule-tabs-tab-list::-webkit-scrollbar {
+    display: none;
   }
 
   .mobileDateTabs .adm-capsule-tabs-header {
     padding: 0;
     border-bottom: 0;
+    overflow: hidden;
   }
 
   .mobileDateTabs .adm-capsule-tabs-tab-wrapper {
@@ -4347,11 +4716,20 @@ label {
   }
 
   .mobileTimelineRow {
+    width: 100%;
+    min-width: 0;
     min-height: 48px;
     grid-template-columns: 38px 28px minmax(0, 1fr) auto 46px;
     gap: 6px;
     padding: 7px;
     border-radius: 9px;
+  }
+
+  .adm-swipe-action,
+  .adm-swipe-action-track,
+  .adm-swipe-action-content {
+    max-width: 100%;
+    min-width: 0;
   }
 
   .mobileTimelineThumb {
@@ -4364,6 +4742,7 @@ label {
   }
 
   .mobileTimelineThumbButton {
+    grid-column: 4;
     width: 42px;
     height: 42px;
   }
@@ -4378,6 +4757,8 @@ label {
   }
 
   .mobileDetailButton {
+    grid-column: 5;
+    justify-self: end;
     width: 48px;
     min-width: 48px;
     height: 28px;
@@ -4452,6 +4833,59 @@ label {
     color: #34443d;
     font-size: 14px;
     line-height: 1.55;
+  }
+
+  .mobileEventEditInput {
+    width: 100%;
+    min-height: 38px;
+    padding: 6px 10px;
+    border: 1px solid #d4dcd7;
+    border-radius: 8px;
+    font-size: 15px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .mobileEventEditInput:focus {
+    border-color: #176047;
+  }
+
+  .mobileEventEditInput.small {
+    max-width: 120px;
+    text-align: right;
+    font-weight: 600;
+    color: #176047;
+  }
+
+  .mobileEventEditTextarea {
+    width: 100%;
+    min-height: 72px;
+    padding: 8px 10px;
+    border: 1px solid #d4dcd7;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.55;
+    background: #fff;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.15s;
+  }
+
+  .mobileEventEditTextarea:focus {
+    border-color: #176047;
+  }
+
+  .mobileTimelineCopy div {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobileTimelineCopy p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .mobileEventDetailActions {
@@ -4549,6 +4983,35 @@ label {
     font-size: 11px;
   }
 
+  .notePresetStrip {
+    gap: 5px;
+  }
+
+  .notePresetStrip button {
+    flex: 1 1 calc(50% - 5px);
+    min-height: 34px;
+  }
+
+  .barkSessionRow {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    padding: 7px 8px;
+  }
+
+  .barkSessionRow em {
+    display: none;
+  }
+
+  .avatarConfigurator {
+    grid-template-columns: 72px minmax(0, 1fr);
+    padding: 8px;
+  }
+
+  .avatarConfigurator img {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+  }
+
   .quickSubmitButton {
     --border-radius: 9px;
     min-height: 44px;
@@ -4556,6 +5019,10 @@ label {
 }
 
 @media (max-width: 560px) {
+  .mobileTimelineTools {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .mobileTimelineRow {
     grid-template-columns: 34px 26px minmax(0, 1fr) auto 42px;
   }
@@ -4566,8 +5033,13 @@ label {
   }
 
   .mobileTimelineThumbButton {
+    grid-column: 4;
     width: 38px;
     height: 38px;
+  }
+
+  .mobileDetailButton {
+    grid-column: 5;
   }
 
   .mobileDetailButton {
@@ -4582,5 +5054,24 @@ label {
 
   .mobileTodayWorkbench .shortcutButton strong {
     max-width: 44px;
+  }
+
+  .dayDistributionScale {
+    margin-left: 54px;
+    font-size: 9px;
+  }
+
+  .dayDistributionRow {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .dayDistributionLabel {
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  .dayDistributionTrack {
+    height: 28px;
   }
 }
