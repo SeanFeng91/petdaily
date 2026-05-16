@@ -3,19 +3,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
+  ArrowUpToLine,
   AudioWaveform,
   Brain,
   CheckCircle2,
   Database,
+  Download,
+  FlaskConical,
   Mic,
   MicOff,
   PauseCircle,
   PlayCircle,
   RefreshCw,
   ShieldCheck,
+  Tag,
   Volume2,
   XCircle
 } from "lucide-react";
+import BarkLabelManager from "@/components/bark-label-manager";
+import { DEFAULT_BARK_LABEL_OPTIONS, mergeBarkLabelOptions } from "@/lib/bark-label-options";
 import {
   BARK_DETECTOR_VERSION,
   BARK_SENSITIVITY_CONFIG,
@@ -31,16 +37,11 @@ import { formatDateTime } from "@/lib/domain";
 const DETECTION_FEATURES = ["rms", "zcr", "spectralCentroid", "spectralFlatness", "spectralRolloff"];
 const CLIP_TAIL_MS = 1300;
 const MAX_ROLLING_CHUNKS = 8;
+const SPECTROGRAM_BANDS = 32;
+const SPECTROGRAM_FRAME_LIMIT = 96;
 const sensitivityConfig = BARK_SENSITIVITY_CONFIG;
 
-const reasonOptions = [
-  { id: "outside", label: "想出去" },
-  { id: "food", label: "想吃" },
-  { id: "bored", label: "无聊" },
-  { id: "attention", label: "关注" },
-  { id: "fear", label: "警觉" },
-  { id: "unknown", label: "不确定" }
-];
+const fallbackReasonOptions = DEFAULT_BARK_LABEL_OPTIONS;
 
 const emptyAnalysis = {
   averageScore: 0,
@@ -59,9 +60,9 @@ function formatDuration(startedAt, endedAt) {
   return seconds >= 60 ? `${Math.round(seconds / 60)} 分钟` : `${seconds} 秒`;
 }
 
-function getReasonLabel(reason) {
+function getReasonLabel(reason, options = fallbackReasonOptions) {
   if (reason === "false_positive" || reason === "false-positive") return "不是狗叫";
-  return reasonOptions.find((item) => item.id === reason)?.label || reason || "";
+  return options.find((item) => item.id === reason)?.label || reason || "";
 }
 
 function minutesSince(typeSet, timelineEvents, now) {
@@ -104,6 +105,55 @@ function calculateWaveform(signal, buckets = 72) {
   return values;
 }
 
+function calculateSpectrogramFrame(frequency, bands = SPECTROGRAM_BANDS) {
+  if (!frequency?.length) return [];
+  const maxBin = Math.max(1, Math.floor(frequency.length * 0.72));
+  const frame = [];
+  for (let band = 0; band < bands; band += 1) {
+    const start = Math.floor((band / bands) ** 1.55 * maxBin);
+    const end = Math.max(start + 1, Math.floor(((band + 1) / bands) ** 1.55 * maxBin));
+    let peak = 0;
+    let sum = 0;
+    let count = 0;
+    for (let index = start; index < Math.min(maxBin, end); index += 1) {
+      const value = frequency[index] / 255;
+      peak = Math.max(peak, value);
+      sum += value;
+      count += 1;
+    }
+    frame.push(Number(clamp(peak * 0.76 + (sum / Math.max(1, count)) * 0.52).toFixed(3)));
+  }
+  return frame;
+}
+
+function normalizeSpectrogramFrames(frames = [], frameLimit = SPECTROGRAM_FRAME_LIMIT, bands = SPECTROGRAM_BANDS) {
+  if (!Array.isArray(frames)) return [];
+  const cleanFrames = frames
+    .map((frame) =>
+      Array.isArray(frame)
+        ? frame
+            .map((value) => Number(value))
+            .filter((value) => Number.isFinite(value))
+            .slice(0, bands)
+        : []
+    )
+    .filter((frame) => frame.length);
+
+  if (cleanFrames.length <= frameLimit) return cleanFrames;
+  const bucketSize = cleanFrames.length / frameLimit;
+  return Array.from({ length: frameLimit }, (_, bucket) => {
+    const start = Math.floor(bucket * bucketSize);
+    const end = Math.max(start + 1, Math.floor((bucket + 1) * bucketSize));
+    return Array.from({ length: bands }, (_, band) => {
+      let peak = 0;
+      for (let index = start; index < Math.min(cleanFrames.length, end); index += 1) {
+        peak = Math.max(peak, Number(cleanFrames[index]?.[band] || 0));
+      }
+      return Number(clamp(peak).toFixed(3));
+    });
+  });
+}
+
 function getRecorderMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
   const playbackProbe = typeof document !== "undefined" ? document.createElement("audio") : null;
@@ -141,6 +191,55 @@ function Waveform({ values = [] }) {
       {bars.map((value, index) => (
         <i key={`${index}-${value}`} style={{ height: `${Math.max(12, Math.round(clamp(value) * 100))}%` }} />
       ))}
+    </div>
+  );
+}
+
+function SpectrogramView({ sample, compact = false }) {
+  const features = sample.features || {};
+  const storedFrames = normalizeSpectrogramFrames(sample.spectrogram || features.spectrogram || [], compact ? 52 : 84, SPECTROGRAM_BANDS);
+  const fallbackWaveform = sample.waveform?.length ? sample.waveform : Array.from({ length: compact ? 40 : 72 }, () => 0.05);
+  const embedding = sample.embedding?.length ? sample.embedding : buildBarkEmbedding(features);
+  const columns = storedFrames.length || (compact ? 52 : 84);
+  const rows = compact ? 18 : 30;
+  const cells = [];
+  const highRatio = clamp(Number(features.highRatio || 0));
+  const centroid = clamp(Number(features.centroid || 0));
+  const flux = clamp(Number(features.spectralFlux || 0) * 5);
+  const flatness = clamp(Number(features.spectralFlatness || 0));
+
+  for (let x = 0; x < columns; x += 1) {
+    const sourceFrame = storedFrames[x];
+    const wave = clamp(Number(fallbackWaveform[Math.floor((x / columns) * fallbackWaveform.length)] || 0));
+    const embed = clamp(Math.abs(Number(embedding[x % Math.max(1, embedding.length)] || 0)));
+    for (let y = 0; y < rows; y += 1) {
+      const frequency = 1 - y / Math.max(1, rows - 1);
+      const frameBand = sourceFrame
+        ? sourceFrame[Math.min(sourceFrame.length - 1, Math.max(0, Math.round((1 - frequency) * (sourceFrame.length - 1))))]
+        : null;
+      const harmonic = Math.exp(-Math.abs(frequency - (0.18 + centroid * 0.62)) * (8 + flux * 8));
+      const highEnergy = frequency > 0.58 ? highRatio * 0.46 : 0;
+      const texture = flatness * 0.08 * ((x + y) % 3);
+      const intensity = sourceFrame
+        ? clamp(Number(frameBand || 0) * 1.34 + wave * 0.18 + embed * 0.05)
+        : clamp(wave * 0.42 + embed * 0.12 + harmonic * wave * 0.95 + highEnergy + texture);
+      cells.push({ x, y, intensity });
+    }
+  }
+
+  return (
+    <div className="barkSpectrogram" aria-label="专业声谱图">
+      <div className="barkSpectrogramAxis">
+        <span>8k</span>
+        <span>4k</span>
+        <span>0</span>
+      </div>
+      <div className="barkSpectrogramGrid" style={{ "--spec-cols": columns, "--spec-rows": rows }}>
+        {cells.map((cell) => (
+          <i key={`${cell.x}-${cell.y}`} style={{ "--heat": cell.intensity }} />
+        ))}
+      </div>
+      <span className="barkSpectrogramMode">{storedFrames.length ? "FFT 频谱" : "旧样本估算"}</span>
     </div>
   );
 }
@@ -277,12 +376,12 @@ async function getAudioRouteDiagnostic(audioSrc) {
   }
 }
 
-function RecommendationBadge({ sample }) {
+function RecommendationBadge({ sample, labelOptions = fallbackReasonOptions }) {
   if (sample.modelSuggestion) {
     return (
       <div className="barkModelBadge strong">
         <Brain size={13} />
-        <span>学习推荐 {getReasonLabel(sample.modelSuggestion)} · {Math.round((sample.modelConfidence || 0) * 100)}%</span>
+        <span>学习推荐 {getReasonLabel(sample.modelSuggestion, labelOptions)} · {Math.round((sample.modelConfidence || 0) * 100)}%</span>
       </div>
     );
   }
@@ -290,17 +389,17 @@ function RecommendationBadge({ sample }) {
     return (
       <div className="barkModelBadge">
         <Brain size={13} />
-        <span>规则猜测 {getReasonLabel(sample.ruleSuggestion)} · {Math.round((sample.ruleConfidence || 0) * 100)}%</span>
+        <span>规则猜测 {getReasonLabel(sample.ruleSuggestion, labelOptions)} · {Math.round((sample.ruleConfidence || 0) * 100)}%</span>
       </div>
     );
   }
   return null;
 }
 
-function SampleCard({ sample, compact = false, onLabel, onPlay, player }) {
+function SampleCard({ sample, compact = false, onLabel, onPlay, player, labelOptions = fallbackReasonOptions }) {
   const score = Math.round((sample.barkScore || 0) * 100);
   const statusText = sample.status === "confirmed" ? "已确认" : sample.status === "false_positive" ? "误报" : "待归类";
-  const reasonLabel = getReasonLabel(sample.reason);
+  const reasonLabel = getReasonLabel(sample.reason, labelOptions);
   const profile = getBarkAcousticProfile(sample.features || {});
   const isActive = player.sampleId === sample.id;
   const isPlaying = isActive && player.status === "playing";
@@ -320,8 +419,9 @@ function SampleCard({ sample, compact = false, onLabel, onPlay, player }) {
         {sample.sessionId ? <em>已归入叫声段</em> : null}
       </div>
       <Waveform values={sample.waveform} />
+      <SpectrogramView sample={sample} compact={compact} />
       <VoiceprintDetails sample={sample} compact={compact} />
-      <RecommendationBadge sample={sample} />
+      <RecommendationBadge sample={sample} labelOptions={labelOptions} />
       {sample.ruleReason && !sample.modelSuggestion ? <p className="barkRuleReason">{sample.ruleReason}</p> : null}
       {canPlay ? (
         <button className={`barkPlayButton ${isActive ? "active" : ""}`} type="button" onClick={() => onPlay(sample)}>
@@ -335,7 +435,7 @@ function SampleCard({ sample, compact = false, onLabel, onPlay, player }) {
       )}
       {!compact ? (
         <div className="barkQuickLabels">
-          {reasonOptions.map((option) => (
+          {labelOptions.map((option) => (
             <button className="secondaryButton" type="button" key={option.id} onClick={() => onLabel(sample, option.id)}>
               <CheckCircle2 size={14} />
               {option.label}
@@ -351,11 +451,11 @@ function SampleCard({ sample, compact = false, onLabel, onPlay, player }) {
   );
 }
 
-function ClusterCard({ cluster, samples, onLabel, onPlay, player, clusterStat }) {
+function ClusterCard({ cluster, samples, onLabel, onPlay, player, clusterStat, labelOptions = fallbackReasonOptions }) {
   const latest = samples[0];
   const pendingCount = samples.filter((sample) => sample.status === "candidate").length;
   const profile = clusterStat?.profile || getBarkAcousticProfile(latest?.features || {});
-  const label = cluster.reason ? reasonOptions.find((item) => item.id === cluster.reason)?.label || cluster.reason : profile.label || "未命名声音";
+  const label = cluster.reason ? getReasonLabel(cluster.reason, labelOptions) || cluster.reason : profile.label || "未命名声音";
 
   return (
     <section className="barkClusterCard">
@@ -366,9 +466,9 @@ function ClusterCard({ cluster, samples, onLabel, onPlay, player, clusterStat })
         </div>
         <b>{latest ? Math.round((latest.barkScore || 0) * 100) : 0}%</b>
       </div>
-      {latest ? <SampleCard sample={latest} compact onLabel={onLabel} onPlay={onPlay} player={player} /> : null}
+      {latest ? <SampleCard sample={latest} compact onLabel={onLabel} onPlay={onPlay} player={player} labelOptions={labelOptions} /> : null}
       <div className="barkQuickLabels clusterLabels">
-        {reasonOptions.map((option) => (
+        {labelOptions.map((option) => (
           <button className="secondaryButton" type="button" key={option.id} onClick={() => latest && onLabel(latest, option.id)}>
             {option.label}
           </button>
@@ -382,7 +482,7 @@ function ClusterCard({ cluster, samples, onLabel, onPlay, player, clusterStat })
           <summary>查看同组其余 {samples.length - 1} 条</summary>
           <div className="barkSampleStack">
             {samples.slice(1).map((sample) => (
-              <SampleCard sample={sample} key={sample.id} compact onLabel={onLabel} onPlay={onPlay} player={player} />
+              <SampleCard sample={sample} key={sample.id} compact onLabel={onLabel} onPlay={onPlay} player={player} labelOptions={labelOptions} />
             ))}
           </div>
         </details>
@@ -391,7 +491,7 @@ function ClusterCard({ cluster, samples, onLabel, onPlay, player, clusterStat })
   );
 }
 
-function SessionCard({ session, samples, onLabel, onPlay, player }) {
+function SessionCard({ session, samples, onLabel, onPlay, player, labelOptions = fallbackReasonOptions }) {
   const sortedSamples = [...samples].sort((a, b) => new Date(a.capturedAt) - new Date(b.capturedAt));
   const displaySamples = [...samples].sort((a, b) => new Date(b.capturedAt) - new Date(a.capturedAt));
   const representative =
@@ -426,10 +526,10 @@ function SessionCard({ session, samples, onLabel, onPlay, player }) {
       <div className="barkSessionMeta">
         <span>{profile.label}</span>
         <span>{statusText}</span>
-        {suggestion ? <strong>{suggestionPrefix} {getReasonLabel(suggestion)} · {Math.round((confidence || 0) * 100)}%</strong> : <em>模型待学习</em>}
+        {suggestion ? <strong>{suggestionPrefix} {getReasonLabel(suggestion, labelOptions)} · {Math.round((confidence || 0) * 100)}%</strong> : <em>模型待学习</em>}
       </div>
       {representative ? (
-        <SampleCard sample={representative} compact onLabel={onLabel} onPlay={onPlay} player={player} />
+        <SampleCard sample={representative} compact onLabel={onLabel} onPlay={onPlay} player={player} labelOptions={labelOptions} />
       ) : (
         <p className="mutedText">这个叫声段还没有代表片段。</p>
       )}
@@ -440,7 +540,7 @@ function SessionCard({ session, samples, onLabel, onPlay, player }) {
             {displaySamples
               .filter((sample) => sample.id !== representative?.id)
               .map((sample) => (
-                <SampleCard sample={sample} key={sample.id} compact onLabel={onLabel} onPlay={onPlay} player={player} />
+                <SampleCard sample={sample} key={sample.id} compact onLabel={onLabel} onPlay={onPlay} player={player} labelOptions={labelOptions} />
               ))}
           </div>
         </details>
@@ -483,6 +583,144 @@ function BarkLearningPanel({ model, summary, clusters, onRebuild, rebuilding }) 
           <RefreshCw size={14} />
           {rebuilding ? "重算中" : "重算聚类"}
         </button>
+      </div>
+    </section>
+  );
+}
+
+function LocalTrainingPanel({ state, runningAction, onAction, onLabel, onPlay, player, labelOptions = fallbackReasonOptions }) {
+  const summary = state?.summary || {};
+  const localModel = state?.localModel || { metrics: {}, prototypes: [] };
+  const lastStatus = state?.status || {};
+  const pendingClusters = (state?.clusters || []).filter((cluster) => cluster.pendingCount > 0).slice(0, 6);
+  const maxPrototypeCount = Math.max(1, ...(localModel.prototypes || []).map((item) => item.sampleCount || 0));
+  const maxLabelCount = Math.max(1, ...(state?.labelDistribution || []).map((item) => item.count || 0));
+
+  return (
+    <section className="contentPanel barkTrainingWorkbench">
+      <div className="sectionHeading">
+        <p>本地训练台</p>
+        <span>先拉云端数据到本地，再本地标注和训练，最后再推云端</span>
+      </div>
+
+      <div className="barkTrainingActions">
+        <button className="secondaryButton" type="button" onClick={() => onAction("download")} disabled={Boolean(runningAction)}>
+          <Download size={14} />
+          {runningAction === "download" ? "拉取中" : "拉取云端数据"}
+        </button>
+        <button className="secondaryButton" type="button" onClick={() => onAction("train")} disabled={Boolean(runningAction)}>
+          <FlaskConical size={14} />
+          {runningAction === "train" ? "训练中" : "本地训练"}
+        </button>
+        <button className="secondaryButton" type="button" onClick={() => onAction("push")} disabled={Boolean(runningAction)}>
+          <ArrowUpToLine size={14} />
+          {runningAction === "push" ? "推送中" : "推送结果"}
+        </button>
+        <button className="miniActionButton" type="button" onClick={() => onAction("sync")} disabled={Boolean(runningAction)}>
+          <RefreshCw size={14} />
+          {runningAction === "sync" ? "执行中" : "一键全流程"}
+        </button>
+      </div>
+
+      <div className="barkTrainingSummary">
+        <MetricChip label="本地样本" value={summary.sampleCount || 0} />
+        <MetricChip label="已标样本" value={summary.labeledSampleCount || 0} />
+        <MetricChip label="本地聚类" value={summary.clusterCount || 0} />
+        <MetricChip label="已下载音频" value={summary.audioDownloaded || 0} />
+      </div>
+
+      <div className="barkTrainingStatusCard">
+        <div className="sectionHeading compact">
+          <p>训练状态</p>
+          <span>{lastStatus.finishedAt ? formatDateTime(lastStatus.finishedAt) : "尚未执行本地训练动作"}</span>
+        </div>
+        <div className="barkTrainingStatusMeta">
+          <span><Tag size={13} /> {localModel.source === "artifact" ? "已保存本地 artifact" : "按当前本地标签实时预估"}</span>
+          <span><Brain size={13} /> {localModel.metrics?.classCount || 0} 个标签类型</span>
+          <span><FlaskConical size={13} /> 训练准确率 {Math.round((localModel.metrics?.trainingAccuracy || 0) * 100)}%</span>
+        </div>
+        {lastStatus.output ? (
+          <details className="barkTrainingLog">
+            <summary>查看上次执行输出</summary>
+            <pre>{lastStatus.output}</pre>
+          </details>
+        ) : (
+          <p className="mutedText">先点“拉取云端数据”把 `data/bark-sync/` 更新到本地，再开始标注和训练。</p>
+        )}
+      </div>
+
+      <div className="barkTrainingResultsGrid">
+        <div className="barkTrainingChart">
+          <div className="sectionHeading compact">
+            <p>标签分布</p>
+            <span>本地训练会直接使用这些人工标签</span>
+          </div>
+          {(state?.labelDistribution || []).length ? (
+            state.labelDistribution.map((item) => (
+              <div className="barkTrainRow" key={item.reason}>
+                <span>{item.label}</span>
+                <div><i style={{ width: `${Math.max(10, ((item.count || 0) / maxLabelCount) * 100)}%` }} /></div>
+                <b>{item.count}</b>
+              </div>
+            ))
+          ) : (
+            <p className="mutedText">现在本地样本还没有人工标签，先给一两个声音组贴上原因，训练结果就会直观起来。</p>
+          )}
+        </div>
+
+        <div className="barkTrainingChart">
+          <div className="sectionHeading compact">
+            <p>原型分类结果</p>
+            <span>{localModel.version || "尚未训练"}</span>
+          </div>
+          {(localModel.prototypes || []).length ? (
+            localModel.prototypes.map((prototype) => (
+              <div className="barkTrainRow" key={prototype.label}>
+                <span>{prototype.labelText}</span>
+                <div><i style={{ width: `${Math.max(10, ((prototype.sampleCount || 0) / maxPrototypeCount) * 100)}%` }} /></div>
+                <b>{prototype.sampleCount}</b>
+                <em>{Math.round((prototype.averageSimilarity || 0) * 100)}%</em>
+              </div>
+            ))
+          ) : (
+            <p className="mutedText">还没有训练出 prototype。先本地标注，再点“本地训练”。</p>
+          )}
+        </div>
+      </div>
+
+      <div className="sectionHeading compact">
+        <p>本地待标注聚类</p>
+        <span>这里改的是本地 `data/bark-sync` 标签，适合先做训练试验</span>
+      </div>
+      <div className="barkLocalClusterList">
+        {pendingClusters.length ? (
+          pendingClusters.map((cluster) => (
+            <section className="barkClusterCard" key={`local-${cluster.id}`}>
+              <div className="barkClusterHeader">
+                <div>
+                  <strong>{cluster.reason ? getReasonLabel(cluster.reason, labelOptions) : "待标注声音组"}</strong>
+                  <span>{cluster.sampleCount} 条本地样本 · 待标 {cluster.pendingCount} 条</span>
+                </div>
+                <b>{Math.round((cluster.representativeSample?.barkScore || 0) * 100)}%</b>
+              </div>
+              {cluster.representativeSample ? (
+                <SampleCard sample={cluster.representativeSample} compact onLabel={onLabel} onPlay={onPlay} player={player} labelOptions={labelOptions} />
+              ) : null}
+              <div className="barkQuickLabels clusterLabels">
+                {labelOptions.map((option) => (
+                  <button className="secondaryButton" type="button" key={`${cluster.id}-${option.id}`} onClick={() => cluster.representativeSample && onLabel(cluster.representativeSample, option.id)}>
+                    {option.label}
+                  </button>
+                ))}
+                <button className="miniDangerButton" type="button" onClick={() => cluster.representativeSample && onLabel(cluster.representativeSample, "false-positive")}>
+                  不是狗叫
+                </button>
+              </div>
+            </section>
+          ))
+        ) : (
+          <p className="mutedText">本地聚类都已经标过，或者还没拉取到本地训练数据。</p>
+        )}
       </div>
     </section>
   );
@@ -583,6 +821,9 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   const [model, setModel] = useState(null);
   const [summary, setSummary] = useState({ total: 0, today: 0, pending: 0, clustered: 0, confirmed: 0, sessions: 0 });
   const [lastSample, setLastSample] = useState(null);
+  const [localTraining, setLocalTraining] = useState(null);
+  const [labelOptions, setLabelOptions] = useState(fallbackReasonOptions);
+  const [runningLocalAction, setRunningLocalAction] = useState("");
   const [savingSample, setSavingSample] = useState(false);
   const [rebuildingClusters, setRebuildingClusters] = useState(false);
   const [filterStats, setFilterStats] = useState({ humanVoice: 0, steadyNoise: 0, merged: 0, clipQuota: 0 });
@@ -602,6 +843,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   const timeByteRef = useRef(null);
   const timeFloatRef = useRef(null);
   const previousFrequencyRef = useRef(null);
+  const spectrogramRef = useRef([]);
   const noiseBaselineRef = useRef(0.025);
   const timelineEventsRef = useRef(timelineEvents);
   const sensitivityRef = useRef(sensitivity);
@@ -609,6 +851,8 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   const mediaRecorderRef = useRef(null);
   const playerObjectUrlRef = useRef("");
   const rollingChunksRef = useRef([]);
+  const recorderHeaderChunkRef = useRef(null);
+  const recorderChunkIndexRef = useRef(0);
   const captureRef = useRef(null);
   const savingClipRef = useRef(false);
   const sessionStateRef = useRef(getInitialBarkSessionState());
@@ -629,6 +873,25 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     setAnalysis(result.analysis || emptyAnalysis);
     setModel(result.model || null);
     setSummary(result.summary || { total: 0, today: 0, pending: 0, clustered: 0, confirmed: 0, sessions: 0 });
+  }, [pet?.id]);
+
+  const refreshLocalTraining = useCallback(async () => {
+    if (!pet?.id) return;
+    const response = await fetch(`/api/bark/training/local?petId=${encodeURIComponent(pet.id)}`);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.message || "本地训练数据读取失败。");
+    }
+    const result = await response.json();
+    setLocalTraining(result);
+  }, [pet?.id]);
+
+  const refreshLabelOptions = useCallback(async () => {
+    if (!pet?.id) return;
+    const response = await fetch(`/api/bark/labels?petId=${encodeURIComponent(pet.id)}`);
+    if (!response.ok) return;
+    const result = await response.json();
+    setLabelOptions(mergeBarkLabelOptions(result.labels || []));
   }, [pet?.id]);
 
   const groupedClusters = useMemo(() => {
@@ -719,6 +982,14 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   }, [refreshLibrary]);
 
   useEffect(() => {
+    refreshLocalTraining().catch((loadError) => setError(loadError?.message || "本地训练台加载失败。"));
+  }, [refreshLocalTraining]);
+
+  useEffect(() => {
+    refreshLabelOptions().catch(() => {});
+  }, [refreshLabelOptions]);
+
+  useEffect(() => {
     return () => {
       if (playerObjectUrlRef.current) URL.revokeObjectURL(playerObjectUrlRef.current);
       stopListening();
@@ -764,6 +1035,9 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   function stopRecorder() {
     captureRef.current = null;
     rollingChunksRef.current = [];
+    recorderHeaderChunkRef.current = null;
+    recorderChunkIndexRef.current = 0;
+    spectrogramRef.current = [];
     if (mediaRecorderRef.current?.state && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
@@ -797,10 +1071,19 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     try {
       const mimeType = getRecorderMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      rollingChunksRef.current = [];
+      recorderHeaderChunkRef.current = null;
+      recorderChunkIndexRef.current = 0;
       recorder.addEventListener("dataavailable", (event) => {
         if (!event.data?.size) return;
-        rollingChunksRef.current = [...rollingChunksRef.current, event.data].slice(-MAX_ROLLING_CHUNKS);
-        if (captureRef.current) captureRef.current.chunks.push(event.data);
+        const chunk = {
+          id: recorderChunkIndexRef.current,
+          blob: event.data
+        };
+        recorderChunkIndexRef.current += 1;
+        if (!recorderHeaderChunkRef.current) recorderHeaderChunkRef.current = chunk;
+        rollingChunksRef.current = [...rollingChunksRef.current, chunk].slice(-MAX_ROLLING_CHUNKS);
+        if (captureRef.current) captureRef.current.chunks.push(chunk);
       });
       recorder.start(500);
       mediaRecorderRef.current = recorder;
@@ -842,6 +1125,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       previousFrequencyRef.current = new Uint8Array(analyser.frequencyBinCount);
       timeByteRef.current = new Uint8Array(analyser.fftSize);
       timeFloatRef.current = new Float32Array(analyser.fftSize);
+      spectrogramRef.current = [];
       detectorRef.current = { activeFrames: 0, lastDetectedAt: Date.now() - sensitivityConfig[sensitivityRef.current].cooldownMs };
       sessionStateRef.current = getInitialBarkSessionState();
       filterCountersRef.current = { humanVoice: 0, steadyNoise: 0, merged: 0, clipQuota: 0 };
@@ -871,6 +1155,10 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     analyser.getByteFrequencyData(frequency);
     analyser.getByteTimeDomainData(timeByte);
     analyser.getFloatTimeDomainData(timeFloat);
+    const spectrogramFrame = calculateSpectrogramFrame(frequency);
+    if (spectrogramFrame.length) {
+      spectrogramRef.current = [...spectrogramRef.current, spectrogramFrame].slice(-SPECTROGRAM_FRAME_LIMIT);
+    }
 
     let sumSquares = 0;
     let peak = 0;
@@ -920,7 +1208,8 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       spectralFlatness: clamp(Number(meydaFeatures.spectralFlatness || 0)),
       zcr: clamp(zcr),
       meydaCentroid: Number(meydaFeatures.spectralCentroid || 0),
-      waveform: calculateWaveform(timeFloat)
+      waveform: calculateWaveform(timeFloat),
+      spectrogramFrame
     };
 
     return features;
@@ -950,7 +1239,11 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
           if (captureRef.current !== session) return;
           captureRef.current = null;
           const type = recorder.mimeType || getRecorderMimeType() || "audio/webm";
-          resolve(session.chunks.length ? new Blob(session.chunks, { type }) : null);
+          const headerChunk = recorderHeaderChunkRef.current;
+          const chunks = headerChunk && !session.chunks.some((chunk) => chunk.id === headerChunk.id)
+            ? [headerChunk, ...session.chunks]
+            : session.chunks;
+          resolve(chunks.length ? new Blob(chunks.map((chunk) => chunk.blob), { type }) : null);
         }, 140);
       }, CLIP_TAIL_MS);
     });
@@ -966,8 +1259,10 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       const audioBlob = await captureAudioClip();
       const capturedAt = new Date().toISOString();
       const context = getTimeContext(timelineEventsRef.current, new Date(capturedAt));
+      const spectrogram = normalizeSpectrogramFrames(spectrogramRef.current, SPECTROGRAM_FRAME_LIMIT, SPECTROGRAM_BANDS);
       const payloadFeatures = {
         ...features,
+        spectrogram,
         ...context,
         durationMs: audioBlob ? Math.round(Math.max(CLIP_TAIL_MS, audioBlob.size / 12)) : CLIP_TAIL_MS
       };
@@ -985,6 +1280,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       form.set("features", JSON.stringify(payloadFeatures));
       form.set("embedding", JSON.stringify(embedding));
       form.set("waveform", JSON.stringify(features.waveform || []));
+      form.set("spectrogram", JSON.stringify(spectrogram));
       if (audioBlob) {
         form.set("audio", audioBlob, `bark-${Date.now()}.${getAudioExtension(audioBlob.type)}`);
       }
@@ -1114,6 +1410,83 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
     }
   }
 
+  async function runLocalAction(action) {
+    if (!pet?.id || runningLocalAction) return;
+    setError("");
+    setRunningLocalAction(action);
+    try {
+      const response = await fetch("/api/bark/training/local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, petId: pet.id })
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.message || "本地训练动作执行失败。");
+      }
+      const result = await response.json();
+      setLocalTraining(result.state || null);
+      if (action === "download" || action === "sync") {
+        await refreshLibrary();
+      }
+    } catch (actionError) {
+      setError(actionError?.message || "本地训练动作执行失败。");
+    } finally {
+      setRunningLocalAction("");
+    }
+  }
+
+  async function labelLocalSample(sample, reason) {
+    setError("");
+    const response = await fetch("/api/bark/training/local", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        petId: pet?.id,
+        sampleId: sample.id,
+        reason,
+        applyToCluster: true
+      })
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      setError(payload?.message || "本地标注失败。");
+      return;
+    }
+    const result = await response.json();
+    setLocalTraining(result);
+  }
+
+  async function createProductionLabel(label) {
+    if (!pet?.id) return;
+    const response = await fetch("/api/bark/labels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ petId: pet.id, label })
+    });
+    if (!response.ok) {
+      setError("生产标签创建失败。");
+      return;
+    }
+    const result = await response.json();
+    setLabelOptions(mergeBarkLabelOptions(result.labels || []));
+  }
+
+  async function deleteProductionLabel(id) {
+    if (!pet?.id) return;
+    const response = await fetch("/api/bark/labels", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ petId: pet.id, id })
+    });
+    if (!response.ok) {
+      setError("生产标签删除失败。");
+      return;
+    }
+    const result = await response.json();
+    setLabelOptions(mergeBarkLabelOptions(result.labels || []));
+  }
+
   async function playSample(sample) {
     const audio = audioRef.current;
     if (!audio || !sample?.id) return;
@@ -1121,8 +1494,9 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       setPlayer({ sampleId: sample.id, src: "", status: "error", error: "这段样本没有保存到可播放音频，只能查看声纹。" });
       return;
     }
-    const audioSrc = sample.audioUrl?.startsWith("/api/")
-      ? sample.audioUrl
+    const preferredAudioUrl = sample.localAudioUrl || sample.audioUrl || "";
+    const audioSrc = preferredAudioUrl?.startsWith("/api/")
+      ? preferredAudioUrl
       : `/api/bark/audio/${encodeURIComponent(sample.id)}`;
 
     if (player.sampleId === sample.id && player.status === "playing") {
@@ -1241,7 +1615,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
               <span>{topSample ? formatDateTime(topSample.capturedAt) : "暂无"}</span>
             </div>
             {topSample ? (
-              <SampleCard sample={topSample} onLabel={labelSample} onPlay={playSample} player={player} />
+              <SampleCard sample={topSample} onLabel={labelSample} onPlay={playSample} player={player} labelOptions={labelOptions} />
             ) : (
               <p className="mutedText">开始监听后，候选狗叫会自动出现在这里。</p>
             )}
@@ -1268,6 +1642,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
             onRebuild={rebuildClusters}
             rebuilding={rebuildingClusters}
           />
+          <BarkLabelManager labels={labelOptions} onCreate={createProductionLabel} onDelete={deleteProductionLabel} compact />
           <div className={`barkPlayerDock ${player.sampleId ? "active" : ""}`}>
             <div>
               <strong>{activePlayerSample ? formatDateTime(activePlayerSample.capturedAt) : "选择一个片段"}</strong>
@@ -1297,6 +1672,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
                   onLabel={labelSample}
                   onPlay={playSample}
                   player={player}
+                  labelOptions={labelOptions}
                 />
               ))
             ) : (
@@ -1316,12 +1692,22 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
                     onPlay={playSample}
                     player={player}
                     clusterStat={clusterStatsById.get(cluster.id)}
+                    labelOptions={labelOptions}
                   />
                 ))}
               </div>
             </details>
           ) : null}
         </section>
+        <LocalTrainingPanel
+          state={localTraining}
+          runningAction={runningLocalAction}
+          onAction={runLocalAction}
+          onLabel={labelLocalSample}
+          onPlay={playSample}
+          player={player}
+          labelOptions={localTraining?.labelOptions || labelOptions}
+        />
         <AnalysisPanel analysis={analysis} sessions={sessions} />
       </div>
     </section>

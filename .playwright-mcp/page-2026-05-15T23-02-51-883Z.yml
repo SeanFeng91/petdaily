@@ -1,0 +1,322 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e6]
+        - strong [ref=e10]: PetDaily
+      - navigation [ref=e11]:
+        - button "时间轴" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e16]: 时间轴
+        - button "监听" [active] [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e20]: 监听
+        - button "洞察" [ref=e21] [cursor=pointer]:
+          - img [ref=e22]
+          - generic [ref=e25]: 洞察
+        - button "我的" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e30]: 我的
+    - main [ref=e31]:
+      - generic [ref=e426]:
+        - generic [ref=e427]:
+          - generic [ref=e428]:
+            - heading "声音库" [level=2] [ref=e429]
+            - paragraph [ref=e430]: 降误报优先，连续叫声合并成段，再按声学形态细分。
+          - button "开始" [ref=e431] [cursor=pointer]:
+            - img [ref=e432]
+            - text: 开始
+        - generic [ref=e435]:
+          - generic [ref=e436]:
+            - img [ref=e437]
+            - strong [ref=e439]: 已停止
+            - generic [ref=e440]: 前台监听
+          - generic [ref=e441]:
+            - text: 灵敏度
+            - combobox "灵敏度" [ref=e442]:
+              - option "降误报" [selected]
+              - option "均衡"
+              - option "多收集"
+        - generic [ref=e443]:
+          - generic [ref=e444]:
+            - generic [ref=e445]: 今日片段
+            - strong [ref=e446]: "0"
+          - generic [ref=e447]:
+            - generic [ref=e448]: 叫声段
+            - strong [ref=e449]: "0"
+          - generic [ref=e450]:
+            - generic [ref=e451]: 疑似狗叫
+            - strong [ref=e452]: "0"
+          - generic [ref=e453]:
+            - generic [ref=e454]: 待确认
+            - strong [ref=e455]: "0"
+          - generic [ref=e456]:
+            - generic [ref=e457]: 已归类
+            - strong [ref=e458]: "0"
+        - generic [ref=e459]:
+          - generic [ref=e460]:
+            - generic [ref=e461]:
+              - paragraph [ref=e462]: 实时检测
+              - generic [ref=e463]: 基础特征 · 仅特征
+            - generic [ref=e464]:
+              - generic [ref=e465]:
+                - generic [ref=e466]: 环境响度
+                - strong [ref=e467]: 0%
+              - generic [ref=e468]:
+                - generic [ref=e469]: 狗叫分数
+                - strong [ref=e470]: 0%
+              - generic [ref=e471]:
+                - generic [ref=e472]: 噪声基线
+                - strong [ref=e473]: 0%
+            - generic [ref=e474]:
+              - img [ref=e475]
+              - generic [ref=e478]: 已过滤 0 帧人声倾向、0 帧稳定噪音；连续叫声合并 0 次。
+            - generic [ref=e479]:
+              - generic [ref=e480]:
+                - paragraph [ref=e481]: 最近样本
+                - generic [ref=e482]: 暂无
+              - paragraph [ref=e483]: 开始监听后，候选狗叫会自动出现在这里。
+          - generic [ref=e484]:
+            - generic [ref=e485]:
+              - paragraph [ref=e486]: 自动聚类
+              - button "重算" [ref=e487] [cursor=pointer]:
+                - img [ref=e488]
+                - text: 重算
+            - generic [ref=e493]:
+              - generic [ref=e494]:
+                - img [ref=e495]
+                - text: 0 条样本
+              - generic [ref=e499]:
+                - img [ref=e500]
+                - text: 0 个声音组
+              - generic [ref=e510]:
+                - img [ref=e511]
+                - text: 单播放器回放
+            - generic [ref=e515]:
+              - generic [ref=e516]:
+                - paragraph [ref=e517]: 学习推荐
+                - generic [ref=e518]: 待标注 · 先标 1-2 组声音
+              - generic [ref=e519]:
+                - generic [ref=e520]:
+                  - generic [ref=e521]: 已标样本
+                  - strong [ref=e522]: "0"
+                - generic [ref=e523]:
+                  - generic [ref=e524]: 标签类型
+                  - strong [ref=e525]: "0"
+                - generic [ref=e526]:
+                  - generic [ref=e527]: 待校准组
+                  - strong [ref=e528]: "0"
+              - generic [ref=e529]:
+                - strong [ref=e530]: 还没有足够反馈
+                - generic [ref=e531]: 先播放每个声音组的代表片段，然后给整组标注原因；之后新片段会自动出现学习推荐。
+              - generic [ref=e532]:
+                - generic [ref=e533]: 没有待校准声音组
+                - button "重算聚类" [ref=e534] [cursor=pointer]:
+                  - img [ref=e535]
+                  - text: 重算聚类
+            - paragraph [ref=e541]: 还没有声音样本。建议先用“降误报”监听一段时间，再回来看声纹段。
+          - generic [ref=e542]:
+            - generic [ref=e543]:
+              - paragraph [ref=e544]: 本地训练台
+              - generic [ref=e545]: 先拉云端数据到本地，再本地标注和训练，最后再推云端
+            - generic [ref=e546]:
+              - button "拉取云端数据" [ref=e547] [cursor=pointer]:
+                - img [ref=e548]
+                - text: 拉取云端数据
+              - button "本地训练" [ref=e551] [cursor=pointer]:
+                - img [ref=e552]
+                - text: 本地训练
+              - button "推送结果" [ref=e554] [cursor=pointer]:
+                - img [ref=e555]
+                - text: 推送结果
+              - button "一键全流程" [ref=e557] [cursor=pointer]:
+                - img [ref=e558]
+                - text: 一键全流程
+            - generic [ref=e563]:
+              - generic [ref=e564]:
+                - generic [ref=e565]: 本地样本
+                - strong [ref=e566]: "158"
+              - generic [ref=e567]:
+                - generic [ref=e568]: 已标样本
+                - strong [ref=e569]: "0"
+              - generic [ref=e570]:
+                - generic [ref=e571]: 本地聚类
+                - strong [ref=e572]: "3"
+              - generic [ref=e573]:
+                - generic [ref=e574]: 已下载音频
+                - strong [ref=e575]: "158"
+            - generic [ref=e576]:
+              - generic [ref=e577]:
+                - paragraph [ref=e578]: 训练状态
+                - generic [ref=e579]: 05/16 07:02
+              - generic [ref=e580]:
+                - generic [ref=e581]:
+                  - img [ref=e582]
+                  - text: 按当前本地标签实时预估
+                - generic [ref=e585]:
+                  - img [ref=e586]
+                  - text: 0 个标签类型
+                - generic [ref=e596]:
+                  - img [ref=e597]
+                  - text: 训练准确率 0%
+              - group [ref=e599]:
+                - generic "查看上次执行输出" [ref=e600] [cursor=pointer]
+            - generic [ref=e601]:
+              - generic [ref=e602]:
+                - generic [ref=e603]:
+                  - paragraph [ref=e604]: 标签分布
+                  - generic [ref=e605]: 本地训练会直接使用这些人工标签
+                - generic [ref=e606]:
+                  - generic [ref=e607]: candidate
+                  - generic [ref=e610]: "158"
+              - generic [ref=e611]:
+                - generic [ref=e612]:
+                  - paragraph [ref=e613]: 原型分类结果
+                  - generic [ref=e614]: bark-local-20260515230221-doubao
+                - paragraph [ref=e615]: 还没有训练出 prototype。先本地标注，再点“本地训练”。
+            - generic [ref=e616]:
+              - paragraph [ref=e617]: 本地待标注聚类
+              - generic [ref=e618]: "这里改的是本地 `data/bark-sync` 标签，适合先做训练试验"
+            - generic [ref=e619]:
+              - generic [ref=e620]:
+                - generic [ref=e621]:
+                  - generic [ref=e622]:
+                    - strong [ref=e623]: 待标注声音组
+                    - generic [ref=e624]: 82 条本地样本 · 待标 82 条
+                  - generic [ref=e625]: 100%
+                - article [ref=e626]:
+                  - generic [ref=e627]:
+                    - generic [ref=e628]: 05/10 17:10
+                    - generic [ref=e629]: 100%
+                    - emphasis [ref=e630]: 待归类
+                  - generic [ref=e631]:
+                    - generic [ref=e632]: 中等低沉 · 起伏混合
+                    - emphasis [ref=e633]: 已归入叫声段
+                  - generic "音频波形" [ref=e634]
+                  - group [ref=e671]:
+                    - generic "详细声纹 中等低沉 · 起伏混合" [ref=e672] [cursor=pointer]:
+                      - img [ref=e673]
+                      - text: 详细声纹
+                      - generic [ref=e675]: 中等低沉 · 起伏混合
+                  - button "播放片段" [ref=e676] [cursor=pointer]:
+                    - img [ref=e677]
+                    - text: 播放片段
+                - generic [ref=e680]:
+                  - button "想出去" [ref=e681] [cursor=pointer]
+                  - button "想吃" [ref=e682] [cursor=pointer]
+                  - button "无聊" [ref=e683] [cursor=pointer]
+                  - button "关注" [ref=e684] [cursor=pointer]
+                  - button "警觉" [ref=e685] [cursor=pointer]
+                  - button "不确定" [ref=e686] [cursor=pointer]
+                  - button "不是狗叫" [ref=e687] [cursor=pointer]
+              - generic [ref=e688]:
+                - generic [ref=e689]:
+                  - generic [ref=e690]:
+                    - strong [ref=e691]: 待标注声音组
+                    - generic [ref=e692]: 74 条本地样本 · 待标 74 条
+                  - generic [ref=e693]: 100%
+                - article [ref=e694]:
+                  - generic [ref=e695]:
+                    - generic [ref=e696]: 05/10 15:59
+                    - generic [ref=e697]: 100%
+                    - emphasis [ref=e698]: 待归类
+                  - generic [ref=e700]: 中等中频 · 持续平稳
+                  - generic "音频波形" [ref=e701]
+                  - group [ref=e738]:
+                    - generic "详细声纹 中等中频 · 持续平稳" [ref=e739] [cursor=pointer]:
+                      - img [ref=e740]
+                      - text: 详细声纹
+                      - generic [ref=e742]: 中等中频 · 持续平稳
+                  - button "播放片段" [ref=e743] [cursor=pointer]:
+                    - img [ref=e744]
+                    - text: 播放片段
+                - generic [ref=e747]:
+                  - button "想出去" [ref=e748] [cursor=pointer]
+                  - button "想吃" [ref=e749] [cursor=pointer]
+                  - button "无聊" [ref=e750] [cursor=pointer]
+                  - button "关注" [ref=e751] [cursor=pointer]
+                  - button "警觉" [ref=e752] [cursor=pointer]
+                  - button "不确定" [ref=e753] [cursor=pointer]
+                  - button "不是狗叫" [ref=e754] [cursor=pointer]
+              - generic [ref=e755]:
+                - generic [ref=e756]:
+                  - generic [ref=e757]:
+                    - strong [ref=e758]: 待标注声音组
+                    - generic [ref=e759]: 2 条本地样本 · 待标 2 条
+                  - generic [ref=e760]: 100%
+                - article [ref=e761]:
+                  - generic [ref=e762]:
+                    - generic [ref=e763]: 05/11 08:36
+                    - generic [ref=e764]: 100%
+                    - emphasis [ref=e765]: 待归类
+                  - generic [ref=e766]:
+                    - generic [ref=e767]: 中等低沉 · 短促尖锐
+                    - emphasis [ref=e768]: 已归入叫声段
+                  - generic "音频波形" [ref=e769]
+                  - group [ref=e806]:
+                    - generic "详细声纹 中等低沉 · 短促尖锐" [ref=e807] [cursor=pointer]:
+                      - img [ref=e808]
+                      - text: 详细声纹
+                      - generic [ref=e810]: 中等低沉 · 短促尖锐
+                  - button "播放片段" [ref=e811] [cursor=pointer]:
+                    - img [ref=e812]
+                    - text: 播放片段
+                - generic [ref=e815]:
+                  - button "想出去" [ref=e816] [cursor=pointer]
+                  - button "想吃" [ref=e817] [cursor=pointer]
+                  - button "无聊" [ref=e818] [cursor=pointer]
+                  - button "关注" [ref=e819] [cursor=pointer]
+                  - button "警觉" [ref=e820] [cursor=pointer]
+                  - button "不确定" [ref=e821] [cursor=pointer]
+                  - button "不是狗叫" [ref=e822] [cursor=pointer]
+          - generic [ref=e823]:
+            - generic [ref=e824]:
+              - paragraph [ref=e825]: 细分分析
+              - generic [ref=e826]: 按声学形态自动归类
+            - generic [ref=e827]:
+              - generic [ref=e828]:
+                - generic [ref=e829]: 叫声段
+                - strong [ref=e830]: "0"
+              - generic [ref=e831]:
+                - generic [ref=e832]: 平均片段
+                - strong [ref=e833]: "0"
+              - generic [ref=e834]:
+                - generic [ref=e835]: 声音画像
+                - strong [ref=e836]: "0"
+            - generic "聚类样本统计" [ref=e837]:
+              - generic [ref=e838]:
+                - paragraph [ref=e839]: 声音组统计
+                - generic [ref=e840]: 等待样本
+              - paragraph [ref=e841]: 采集到多段声音后，这里会显示每个聚类的样本数量和平均分数。
+            - paragraph [ref=e843]: 样本积累后，这里会显示短促、持续、高亢、低沉等细分画像。
+            - generic "按小时分布" [ref=e844]:
+              - generic "0:00 0 次" [ref=e845]
+              - generic "1:00 0 次" [ref=e846]
+              - generic "2:00 0 次" [ref=e847]
+              - generic "3:00 0 次" [ref=e848]
+              - generic "4:00 0 次" [ref=e849]
+              - generic "5:00 0 次" [ref=e850]
+              - generic "6:00 0 次" [ref=e851]
+              - generic "7:00 0 次" [ref=e852]
+              - generic "8:00 0 次" [ref=e853]
+              - generic "9:00 0 次" [ref=e854]
+              - generic "10:00 0 次" [ref=e855]
+              - generic "11:00 0 次" [ref=e856]
+              - generic "12:00 0 次" [ref=e857]
+              - generic "13:00 0 次" [ref=e858]
+              - generic "14:00 0 次" [ref=e859]
+              - generic "15:00 0 次" [ref=e860]
+              - generic "16:00 0 次" [ref=e861]
+              - generic "17:00 0 次" [ref=e862]
+              - generic "18:00 0 次" [ref=e863]
+              - generic "19:00 0 次" [ref=e864]
+              - generic "20:00 0 次" [ref=e865]
+              - generic "21:00 0 次" [ref=e866]
+              - generic "22:00 0 次" [ref=e867]
+              - generic "23:00 0 次" [ref=e868]
+            - paragraph [ref=e870]: 连续叫声会自动合并成“叫声段”，这里展示每段的持续时间和代表片段。
+    - button "新增事件" [ref=e424] [cursor=pointer]:
+      - img [ref=e425]
+  - button "Open Next.js Dev Tools" [ref=e876] [cursor=pointer]:
+    - img [ref=e877]
+  - alert [ref=e880]

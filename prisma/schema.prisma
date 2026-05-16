@@ -28,6 +28,7 @@ model PetProfile {
   barkClusters   BarkCluster[]
   barkSessions   BarkSession[]
   barkModels      BarkModelArtifact[]
+  barkLabels      BarkLabelOption[]
 }
 
 model TimelineEvent {
@@ -98,6 +99,7 @@ model BarkSample {
   features         String       @default("{}")
   embedding        String       @default("[]")
   waveform         String       @default("[]")
+  spectrogram      String       @default("[]")
   barkScore        Float        @default(0)
   detectorVersion  String
   status           String       @default("candidate")
@@ -131,6 +133,18 @@ model BarkModelArtifact {
 
   @@index([petId, modelType, status])
   @@unique([petId, version, modelType])
+}
+
+model BarkLabelOption {
+  id        String     @id
+  petId     String
+  label     String
+  builtIn   Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  pet       PetProfile @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
 }
 
 model Reminder {

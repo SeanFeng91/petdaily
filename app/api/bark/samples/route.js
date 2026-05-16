@@ -17,6 +17,9 @@ function getErrorMessage(error, fallback) {
   if (message.includes("BarkSession") || message.includes("sessionId")) {
     return "声音库数据库结构未更新，请先应用 BarkSession 迁移。";
   }
+  if (message.includes("audioSizeBytes") || message.includes("no such column") || message.includes("D1_ERROR")) {
+    return "声音库数据库结构缺少 audioSizeBytes/spectrogram 列，请先应用最新 Bark 迁移后重试。";
+  }
   return message;
 }
 
@@ -64,7 +67,8 @@ export async function POST(request) {
         note: form.get("note"),
         features: parseJsonField(form.get("features"), {}),
         embedding: parseJsonField(form.get("embedding"), []),
-        waveform: parseJsonField(form.get("waveform"), [])
+        waveform: parseJsonField(form.get("waveform"), []),
+        spectrogram: parseJsonField(form.get("spectrogram"), [])
       },
       audio instanceof Blob ? audio : null
     );

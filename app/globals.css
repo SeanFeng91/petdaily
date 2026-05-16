@@ -1865,6 +1865,53 @@ label {
   background: linear-gradient(180deg, #475569, #2f8f6b);
 }
 
+.barkSpectrogram {
+  position: relative;
+  min-height: 132px;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid rgba(72, 118, 211, 0.16);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 32%),
+    #050f2f;
+}
+
+.barkSpectrogramAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: rgba(244, 250, 248, 0.62);
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.barkSpectrogramGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--spec-cols), minmax(2px, 1fr));
+  grid-template-rows: repeat(var(--spec-rows), minmax(3px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.barkSpectrogramGrid i {
+  background: hsl(calc(228 - var(--heat) * 76) 96% calc(20% + var(--heat) * 46%));
+  box-shadow: 0 0 calc(var(--heat) * 9px) hsl(calc(188 - var(--heat) * 40) 100% 58% / calc(var(--heat) * 0.52));
+  opacity: calc(0.24 + var(--heat) * 0.76);
+}
+
+.barkSpectrogramMode {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  color: rgba(241, 250, 248, 0.62);
+  font-size: 10px;
+  font-weight: 780;
+}
+
 .barkVoiceprintDetails {
   display: grid;
   gap: 8px;
@@ -1972,6 +2019,67 @@ label {
   background: linear-gradient(180deg, #2f8f6b, #475569);
 }
 
+.barkLabelManager {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfdfc;
+}
+
+.barkLabelManager.compact {
+  padding: 8px;
+}
+
+.barkLabelForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.barkLabelForm input {
+  min-height: 34px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0 9px;
+  background: white;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.barkLabelList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.barkLabelList span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #edf4f0;
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.barkLabelList button {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(23, 96, 71, 0.1);
+  color: var(--accent-dark);
+}
+
 .barkQuickLabels {
   display: flex;
   flex-wrap: wrap;
@@ -2049,6 +2157,129 @@ label {
   flex: 0 0 auto;
 }
 
+.barkTrainingWorkbench,
+.barkTrainingChart,
+.barkLocalClusterList {
+  display: grid;
+  gap: 10px;
+}
+
+.barkTrainingWorkbench {
+  grid-column: 1 / -1;
+}
+
+.barkTrainingActions,
+.barkTrainingStatusMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.barkTrainingSummary,
+.barkTrainingResultsGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.barkTrainingSummary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.barkTrainingStatusCard,
+.barkTrainingChart {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfdfc;
+}
+
+.barkTrainingStatusMeta span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #edf4f0;
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.barkTrainingLog {
+  display: grid;
+  gap: 8px;
+}
+
+.barkTrainingLog summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.barkTrainingLog pre {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: #16231e;
+  color: #f6faf8;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.barkTrainingResultsGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.barkTrainRow {
+  display: grid;
+  grid-template-columns: minmax(86px, 0.95fr) minmax(110px, 1.2fr) 36px 44px;
+  gap: 8px;
+  align-items: center;
+  min-height: 30px;
+}
+
+.barkTrainRow span {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 820;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barkTrainRow div {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf1f5;
+}
+
+.barkTrainRow i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f8f6b, #4876d3);
+}
+
+.barkTrainRow b,
+.barkTrainRow em {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 840;
+  text-align: right;
+}
+
+.barkLocalClusterList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .barkClusterArchive {
   display: grid;
   gap: 8px;
@@ -2075,6 +2306,349 @@ label {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.trainingPage {
+  min-height: 100svh;
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.trainingHero,
+.trainingPanel,
+.trainingMetric,
+.trainingFooter {
+  border: 1px solid rgba(220, 230, 225, 0.92);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 16px 42px rgba(25, 38, 31, 0.07);
+}
+
+.trainingHero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+}
+
+.trainingEyebrow {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 860;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trainingHero h1 {
+  margin: 6px 0 6px;
+  font-size: clamp(30px, 5vw, 54px);
+  line-height: 0.98;
+}
+
+.trainingHero p {
+  max-width: 780px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.trainingActions,
+.trainingStageRow,
+.trainingFooter,
+.chartLegend,
+.trainingLabelButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trainingActions {
+  justify-content: flex-end;
+  min-width: min(460px, 100%);
+}
+
+.trainingMetrics,
+.trainingGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.trainingMetrics {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.trainingMetric {
+  min-height: 86px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 12px;
+}
+
+.trainingMetric span,
+.trainingMetric em,
+.trainingFooter span {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 760;
+}
+
+.trainingMetric strong {
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.trainingGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trainingPanel {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.trainingPanel.wide {
+  grid-column: 1 / -1;
+}
+
+.trainingPill {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #edf1f5;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.trainingPill.done {
+  color: var(--accent-dark);
+  background: #e2f2ea;
+}
+
+.trainingPill em {
+  color: inherit;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 680;
+  opacity: 0.74;
+}
+
+.trainingChartSurface {
+  display: grid;
+  gap: 8px;
+}
+
+.trainingChartSurface svg {
+  width: 100%;
+  min-height: 210px;
+  border-radius: var(--radius);
+  background: #f8fbfa;
+}
+
+.chartGrid {
+  fill: none;
+  stroke: rgba(102, 115, 109, 0.18);
+  stroke-width: 1;
+}
+
+.lossLine,
+.validationLossLine,
+.accuracyLine,
+.validationAccuracyLine {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lossLine { stroke: var(--rose); }
+.validationLossLine { stroke: var(--amber); }
+.accuracyLine { stroke: var(--accent); }
+.validationAccuracyLine { stroke: var(--blue); }
+
+.chartLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.chartLegend i {
+  width: 16px;
+  height: 4px;
+  display: inline-block;
+  border-radius: 999px;
+}
+
+.chartLegend .loss { background: var(--rose); }
+.chartLegend .validationLoss { background: var(--amber); }
+.chartLegend .accuracy { background: var(--accent); }
+.chartLegend .validationAccuracy { background: var(--blue); }
+
+.trainingBars,
+.trainingClusterGrid,
+.pseudoLabelTable {
+  display: grid;
+  gap: 8px;
+}
+
+.trainingQualityNote {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: #f4f8f6;
+}
+
+.trainingQualityNote strong {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 860;
+}
+
+.trainingQualityNote span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.trainingBarRow {
+  display: grid;
+  grid-template-columns: minmax(74px, 0.8fr) minmax(90px, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.trainingBarRow span,
+.trainingBarRow b {
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.trainingBarRow div {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf1f5;
+}
+
+.trainingBarRow i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+}
+
+.confusionMatrix {
+  display: grid;
+  grid-template-columns: 78px repeat(var(--matrix-count), minmax(46px, 1fr));
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.matrixRow {
+  display: contents;
+}
+
+.confusionMatrix b,
+.confusionMatrix span {
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.confusionMatrix b {
+  color: var(--muted);
+}
+
+.confusionMatrix span {
+  background: color-mix(in srgb, var(--accent) calc(var(--heat) * 86%), #edf1f5);
+  color: var(--text);
+}
+
+.trainingClusterGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trainingClusterCard {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfdfc;
+}
+
+.trainingClusterCard strong,
+.pseudoLabelTable strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.trainingClusterCard span,
+.pseudoLabelTable span,
+.pseudoLabelTable em,
+.pseudoLabelTable b {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.pseudoLabelTable button {
+  display: grid;
+  grid-template-columns: 96px 72px 46px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0 10px;
+  background: white;
+  text-align: left;
+}
+
+.pseudoLabelTable b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trainingAudioDock {
+  position: sticky;
+  bottom: 10px;
+  z-index: 4;
+  width: min(520px, 100%);
+  justify-self: end;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+
+.trainingFooter {
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.trainingFooter span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .barkAnalysisPanel {
@@ -2385,6 +2959,30 @@ label {
 }
 
 @media (max-width: 980px) {
+  .trainingPage {
+    padding: 12px;
+  }
+
+  .trainingHero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trainingActions {
+    min-width: 0;
+    justify-content: stretch;
+  }
+
+  .trainingActions button {
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .trainingMetrics,
+  .trainingGrid,
+  .trainingClusterGrid {
+    grid-template-columns: 1fr;
+  }
+
   .appShell {
     display: block;
   }
@@ -2481,6 +3079,12 @@ label {
     gap: 6px;
   }
 
+  .barkTrainingSummary,
+  .barkTrainingResultsGrid,
+  .barkLocalClusterList {
+    grid-template-columns: 1fr;
+  }
+
   .barkMetricChip {
     min-height: 50px;
     padding: 8px;
@@ -2532,6 +3136,24 @@ label {
 }
 
 @media (max-width: 560px) {
+  .trainingHero h1 {
+    font-size: 34px;
+  }
+
+  .trainingActions button {
+    flex-basis: 100%;
+  }
+
+  .pseudoLabelTable button {
+    grid-template-columns: 78px 62px 38px minmax(0, 1fr);
+    padding: 0 8px;
+  }
+
+  .trainingFooter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .appMain {
     padding-left: 10px;
     padding-right: 10px;
@@ -2568,6 +3190,11 @@ label {
   .barkLearningActions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .barkTrainingActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .barkClusterCard,
@@ -3510,6 +4137,15 @@ label {
 
   .barkMeter span {
     font-size: 10px;
+  }
+
+  .barkTrainingActions {
+    grid-template-columns: 1fr;
+  }
+
+  .barkTrainRow {
+    grid-template-columns: minmax(74px, 0.95fr) minmax(90px, 1fr) 32px 38px;
+    gap: 6px;
   }
 
   .barkMeter strong {
