@@ -1,0 +1,229 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - region "手机端今日工作台" [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e6]:
+            - text: PetDaily
+            - strong [ref=e7]: 豆包
+          - generic [ref=e8]:
+            - generic [ref=e9]:
+              - term [ref=e10]: 今日
+              - definition [ref=e11]: "2"
+            - generic [ref=e12]:
+              - term [ref=e13]: 体重
+              - definition [ref=e14]: 3.2kg
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - paragraph [ref=e18]: 快捷事件
+            - button "配置快捷事件" [ref=e19] [cursor=pointer]:
+              - img [ref=e20]
+          - generic [ref=e23]:
+            - button "早餐" [active] [ref=e24] [cursor=pointer]:
+              - strong [ref=e25]: 早餐
+            - button "晚餐" [ref=e26] [cursor=pointer]:
+              - strong [ref=e27]: 晚餐
+            - button "尿尿" [ref=e28] [cursor=pointer]:
+              - strong [ref=e29]: 尿尿
+            - button "便便" [ref=e30] [cursor=pointer]:
+              - strong [ref=e31]: 便便
+            - button "训练" [ref=e32] [cursor=pointer]:
+              - strong [ref=e33]: 训练
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - strong [ref=e36]: 提醒
+            - generic [ref=e37]: 优先显示到点事项
+          - generic [ref=e38]:
+            - article [ref=e39]:
+              - generic [ref=e40]:
+                - strong [ref=e41]: 08:05
+                - text: 外出如厕
+              - paragraph [ref=e42]: 早餐后外出如厕
+              - generic [ref=e43]: 已到点
+              - generic [ref=e44]:
+                - button "完成提醒" [ref=e45] [cursor=pointer]:
+                  - img [ref=e46]
+                - button "跳过提醒" [ref=e48] [cursor=pointer]:
+                  - img [ref=e49]
+                - button "暂停提醒" [ref=e51] [cursor=pointer]:
+                  - img [ref=e52]
+            - article [ref=e54]:
+              - generic [ref=e55]:
+                - strong [ref=e56]: 09:00
+                - text: 驱虫
+              - paragraph [ref=e57]: 下一次体内外驱虫
+              - generic [ref=e58]: 已到点
+              - generic [ref=e59]:
+                - button "完成提醒" [ref=e60] [cursor=pointer]:
+                  - img [ref=e61]
+                - button "跳过提醒" [ref=e63] [cursor=pointer]:
+                  - img [ref=e64]
+                - button "暂停提醒" [ref=e66] [cursor=pointer]:
+                  - img [ref=e67]
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - generic [ref=e71]:
+              - strong [ref=e72]: 当日事件
+              - generic [ref=e73]: 6 条
+            - generic [ref=e74]:
+              - button "日" [ref=e75] [cursor=pointer]
+              - button "周" [ref=e76] [cursor=pointer]
+            - generic [ref=e405]:
+              - generic [ref=e408] [cursor=pointer]:
+                - strong [ref=e409]: 今天
+                - emphasis [ref=e410]: 周日
+              - generic [ref=e413] [cursor=pointer]:
+                - strong [ref=e414]: 05/05
+                - emphasis [ref=e415]: 周二
+              - generic [ref=e418] [cursor=pointer]:
+                - strong [ref=e419]: 05/04
+                - emphasis [ref=e420]: 周一
+              - generic [ref=e423] [cursor=pointer]:
+                - strong [ref=e424]: 05/03
+                - emphasis [ref=e425]: 周日
+              - generic [ref=e428] [cursor=pointer]:
+                - strong [ref=e429]: 05/02
+                - emphasis [ref=e430]: 周六
+              - generic [ref=e433] [cursor=pointer]:
+                - strong [ref=e434]: 05/01
+                - emphasis [ref=e435]: 周五
+          - generic [ref=e436]:
+            - generic [ref=e438]:
+              - article [ref=e441]:
+                - generic [ref=e442]: 22:08
+                - img [ref=e444]
+                - generic [ref=e449]:
+                  - generic [ref=e450]:
+                    - strong [ref=e451]: 睡前尿尿
+                    - generic [ref=e452]: 1次
+                  - paragraph [ref=e453]: 固定口令有效。
+                - button "查看 睡前尿尿 详情" [ref=e454] [cursor=pointer]:
+                  - img [ref=e456]
+              - button "删除" [ref=e459] [cursor=pointer]
+            - generic [ref=e461]:
+              - article [ref=e464]:
+                - generic [ref=e465]: 18:35
+                - img [ref=e467]
+                - generic [ref=e470]:
+                  - generic [ref=e471]:
+                    - strong [ref=e472]: 晚餐完成
+                    - generic [ref=e473]: 45g
+                  - paragraph [ref=e474]: 食欲稳定。
+                - button "查看 晚餐完成 详情" [ref=e475] [cursor=pointer]:
+                  - img [ref=e477]
+              - button "删除" [ref=e480] [cursor=pointer]
+            - generic [ref=e482]:
+              - article [ref=e485]:
+                - generic [ref=e486]: 14:20
+                - img [ref=e488]
+                - generic [ref=e490]:
+                  - strong [ref=e492]: 笼内安静训练
+                  - paragraph [ref=e493]: 午睡前哼叫 2 分钟后安静。
+                - button "查看 笼内安静训练 详情" [ref=e494] [cursor=pointer]:
+                  - img [ref=e496]
+              - button "删除" [ref=e499] [cursor=pointer]
+            - generic [ref=e501]:
+              - article [ref=e504]:
+                - generic [ref=e505]: 08:32
+                - img [ref=e507]
+                - generic [ref=e512]:
+                  - generic [ref=e513]:
+                    - strong [ref=e514]: 便便成型
+                    - generic [ref=e515]: 1次
+                  - paragraph [ref=e516]: 颜色正常，形态偏软但成型。
+                - button "查看 便便成型 详情" [ref=e517] [cursor=pointer]:
+                  - img [ref=e519]
+              - button "删除" [ref=e522] [cursor=pointer]
+            - generic [ref=e524]:
+              - article [ref=e527]:
+                - generic [ref=e528]: 08:18
+                - img [ref=e530]
+                - generic [ref=e535]:
+                  - generic [ref=e536]:
+                    - strong [ref=e537]: 饭后尿尿
+                    - generic [ref=e538]: 1次
+                  - paragraph [ref=e539]: 在楼下草地完成，奖励及时。
+                - button "查看 饭后尿尿 详情" [ref=e540] [cursor=pointer]:
+                  - img [ref=e542]
+              - button "删除" [ref=e545] [cursor=pointer]
+            - generic [ref=e547]:
+              - article [ref=e550]:
+                - generic [ref=e551]: 07:38
+                - img [ref=e553]
+                - generic [ref=e556]:
+                  - generic [ref=e557]:
+                    - strong [ref=e558]: 早餐完成
+                    - generic [ref=e559]: 45g
+                  - paragraph [ref=e560]: 幼犬粮泡软，5 分钟吃完。
+                - button "查看 早餐完成 详情" [ref=e561] [cursor=pointer]:
+                  - img [ref=e563]
+              - button "删除" [ref=e566] [cursor=pointer]
+    - img [ref=e151] [cursor=pointer]
+    - navigation "主导航" [ref=e152]:
+      - generic [ref=e154]:
+        - generic [ref=e155] [cursor=pointer]:
+          - img [ref=e158]
+          - generic [ref=e161]: 时间轴
+        - generic [ref=e162] [cursor=pointer]:
+          - img [ref=e165]
+          - generic [ref=e167]: 监听
+        - generic [ref=e168] [cursor=pointer]:
+          - img [ref=e171]
+          - generic [ref=e174]: 洞察
+        - generic [ref=e175] [cursor=pointer]:
+          - img [ref=e178]
+          - generic [ref=e181]: 我的
+  - button "Open Next.js Dev Tools" [ref=e187] [cursor=pointer]:
+    - img [ref=e188]
+  - alert [ref=e191]
+  - generic:
+    - generic [ref=e567]:
+      - button
+    - region "快速记录" [ref=e569]:
+      - generic [ref=e570]:
+        - generic [ref=e571]:
+          - paragraph [ref=e572]: 新增事件
+          - text: 先选事件，再确认时间和备注。
+        - button "关闭" [ref=e573] [cursor=pointer]:
+          - img [ref=e574]
+      - generic [ref=e577]:
+        - listbox "选择组" [ref=e578]:
+          - generic [ref=e579]:
+            - option "早餐" [selected] [ref=e580] [cursor=pointer]:
+              - generic [ref=e581]: 早餐
+            - option "晚餐" [ref=e582] [cursor=pointer]:
+              - generic [ref=e583]: 晚餐
+            - option "尿尿" [ref=e584] [cursor=pointer]:
+              - generic [ref=e585]: 尿尿
+            - option "便便" [ref=e586] [cursor=pointer]:
+              - generic [ref=e587]: 便便
+            - option "训练" [ref=e588] [cursor=pointer]:
+              - generic [ref=e589]: 训练
+            - option "睡觉" [ref=e590] [cursor=pointer]:
+              - generic [ref=e591]: 睡觉
+            - option "称重" [ref=e592] [cursor=pointer]:
+              - generic [ref=e593]: 称重
+            - option "疫苗" [ref=e594] [cursor=pointer]:
+              - generic [ref=e595]: 疫苗
+            - option "驱虫" [ref=e596] [cursor=pointer]:
+              - generic [ref=e597]: 驱虫
+        - generic [ref=e598]:
+          - text: 事件名称
+          - textbox "事件名称" [ref=e599]:
+            - /placeholder: 比如 晚餐 / 尿尿 / 训练
+            - text: 早餐
+        - listbox "选择组" [ref=e600]:
+          - generic [ref=e601]:
+            - option "单点事件" [selected] [ref=e602] [cursor=pointer]
+            - option "持续时段" [ref=e603] [cursor=pointer]
+        - generic [ref=e604]:
+          - text: 发生时间
+          - textbox "发生时间" [ref=e605]: 2026-05-17T22:56
+        - generic [ref=e606]:
+          - text: 备注
+          - textbox "备注" [ref=e607]:
+            - /placeholder: 可选，比如饭后 20 分钟完成尿尿。
+        - button "照片（可选）" [ref=e609] [cursor=pointer]:
+          - generic [ref=e610]: 照片（可选）
+          - img [ref=e611]
+        - button "保存记录" [ref=e613] [cursor=pointer]

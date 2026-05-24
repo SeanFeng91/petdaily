@@ -1,0 +1,719 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - img [ref=e6]
+      - strong [ref=e10]: PetDaily
+    - navigation [ref=e11]:
+      - button "时间轴" [ref=e12]:
+        - img [ref=e13]
+        - text: 时间轴
+      - button "监听" [ref=e16]:
+        - img [ref=e17]
+        - text: 监听
+      - button "洞察" [ref=e19]:
+        - img [ref=e20]
+        - text: 洞察
+      - button "我的" [ref=e23]:
+        - img [ref=e24]
+        - text: 我的
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "白板日记" [level=1] [ref=e31]
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - paragraph [ref=e35]: 快捷事件
+            - text: 数字键 1-5 可快速打开预填表单
+          - button "配置快捷事件" [ref=e36]:
+            - img [ref=e37]
+            - text: 配置
+        - generic [ref=e40]:
+          - button "1早餐单点" [ref=e41]:
+            - text: "1"
+            - strong [ref=e42]: 早餐
+            - text: 单点
+          - button "2晚餐单点" [ref=e43]:
+            - text: "2"
+            - strong [ref=e44]: 晚餐
+            - text: 单点
+          - button "3尿尿单点" [ref=e45]:
+            - text: "3"
+            - strong [ref=e46]: 尿尿
+            - text: 单点
+          - button "4便便单点" [ref=e47]:
+            - text: "4"
+            - strong [ref=e48]: 便便
+            - text: 单点
+          - button "5训练时段" [ref=e49]:
+            - text: "5"
+            - strong [ref=e50]: 训练
+            - text: 时段
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - paragraph [ref=e53]: 日分布
+          - text: 最近几天的纵向分布
+        - generic "多日纵向时间分布" [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]: 持续时段
+            - generic [ref=e57]: 单点事件
+          - generic [ref=e59]:
+            - strong [ref=e61]: Time
+            - generic [ref=e62]:
+              - strong [ref=e63]: 05/03
+              - text: 周日
+            - generic [ref=e64]:
+              - strong [ref=e65]: 05/04
+              - text: 周一
+            - generic [ref=e66]:
+              - strong [ref=e67]: 05/05
+              - text: 周二
+            - generic [ref=e68]:
+              - strong [ref=e69]: 今天
+              - text: 周日
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - text: AM
+                - strong [ref=e72]: "12"
+              - generic [ref=e73]:
+                - text: AM
+                - strong [ref=e74]: "01"
+              - generic [ref=e75]:
+                - text: AM
+                - strong [ref=e76]: "02"
+              - generic [ref=e77]:
+                - text: AM
+                - strong [ref=e78]: "03"
+              - generic [ref=e79]:
+                - text: AM
+                - strong [ref=e80]: "04"
+              - generic [ref=e81]:
+                - text: AM
+                - strong [ref=e82]: "05"
+              - generic [ref=e83]:
+                - text: AM
+                - strong [ref=e84]: "06"
+              - generic [ref=e85]:
+                - text: AM
+                - strong [ref=e86]: "07"
+              - generic [ref=e87]:
+                - text: AM
+                - strong [ref=e88]: "08"
+              - generic [ref=e89]:
+                - text: AM
+                - strong [ref=e90]: "09"
+              - generic [ref=e91]:
+                - text: AM
+                - strong [ref=e92]: "10"
+              - generic [ref=e93]:
+                - text: AM
+                - strong [ref=e94]: "11"
+              - generic [ref=e95]:
+                - text: PM
+                - strong [ref=e96]: "12"
+              - generic [ref=e97]:
+                - text: PM
+                - strong [ref=e98]: "01"
+              - generic [ref=e99]:
+                - text: PM
+                - strong [ref=e100]: "02"
+              - generic [ref=e101]:
+                - text: PM
+                - strong [ref=e102]: "03"
+              - generic [ref=e103]:
+                - text: PM
+                - strong [ref=e104]: "04"
+              - generic [ref=e105]:
+                - text: PM
+                - strong [ref=e106]: "05"
+              - generic [ref=e107]:
+                - text: PM
+                - strong [ref=e108]: "06"
+              - generic [ref=e109]:
+                - text: PM
+                - strong [ref=e110]: "07"
+              - generic [ref=e111]:
+                - text: PM
+                - strong [ref=e112]: "08"
+              - generic [ref=e113]:
+                - text: PM
+                - strong [ref=e114]: "09"
+              - generic [ref=e115]:
+                - text: PM
+                - strong [ref=e116]: "10"
+              - generic [ref=e117]:
+                - text: PM
+                - strong [ref=e118]: "11"
+            - generic [ref=e121]: 现在 23:18
+            - button "05/03 08:10 早餐前称重" [ref=e123]: 早餐前称重
+            - generic [ref=e124]:
+              - button "05/04 07:38 早餐完成" [ref=e125]: 早餐完成
+              - button "05/04 08:18 饭后尿尿" [ref=e126]: 饭后尿尿
+              - button "05/04 08:32 便便成型" [ref=e127]: 便便成型
+              - button "05/04 14:20 笼内安静训练" [ref=e128]: 笼内安静训练
+              - button "05/04 18:35 晚餐完成" [ref=e129]: 晚餐完成
+              - button "05/04 22:08 睡前尿尿" [ref=e130]: 睡前尿尿
+            - generic [ref=e131]:
+              - button "05/05 07:35 早餐完成" [ref=e132]: 早餐完成
+              - button "05/05 08:09 饭后尿尿" [ref=e133]: 饭后尿尿
+              - button "05/05 09:20 第一次认真看镜头" [ref=e134]: 第一次认真看镜头
+              - button "05/05 10:18 上午便便" [ref=e135]: 上午便便
+              - button "05/05 18:30 晚餐完成" [ref=e136]: 晚餐完成
+            - generic [ref=e137]:
+              - button "今天 08:00 上午睡觉" [ref=e138]: 上午睡觉
+              - button "今天 16:46 早餐完成" [ref=e139]: 早餐完成
+      - generic [ref=e140]:
+        - generic [ref=e141]:
+          - generic [ref=e143]:
+            - paragraph [ref=e144]: 事件流
+            - generic [ref=e145]: 16 条记录
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - strong [ref=e149]: 05/17
+                - text: 周日
+              - generic [ref=e150]:
+                - article [ref=e151]:
+                  - generic [ref=e152]: 16:46
+                  - generic [ref=e154]:
+                    - generic [ref=e155]:
+                      - img [ref=e156]
+                      - text: 饮食
+                    - strong [ref=e159]: 早餐完成
+                    - generic [ref=e160]: 45g
+                    - generic [ref=e161]:
+                      - button "删除" [ref=e162]:
+                        - img [ref=e163]
+                        - text: 删除
+                      - button "查看 早餐完成 详情" [ref=e166]:
+                        - img [ref=e167]
+                - article [ref=e169]:
+                  - generic [ref=e170]: 08:00
+                  - generic [ref=e171]:
+                    - generic [ref=e172]:
+                      - generic [ref=e173]:
+                        - img [ref=e174]
+                        - text: 事件
+                      - strong [ref=e176]: 上午睡觉
+                      - generic [ref=e177]:
+                        - button "删除" [ref=e178]:
+                          - img [ref=e179]
+                          - text: 删除
+                        - button "查看 上午睡觉 详情" [ref=e182]:
+                          - img [ref=e183]
+                    - paragraph [ref=e185]: 睡得很沉
+            - generic [ref=e186]:
+              - generic [ref=e187]:
+                - strong [ref=e188]: 05/05
+                - text: 周二
+              - generic [ref=e189]:
+                - article [ref=e190]:
+                  - generic [ref=e191]: 18:30
+                  - generic [ref=e192]:
+                    - generic [ref=e193]:
+                      - generic [ref=e194]:
+                        - img [ref=e195]
+                        - text: 饮食
+                      - strong [ref=e198]: 晚餐完成
+                      - generic [ref=e199]: 45g
+                      - generic [ref=e200]:
+                        - button "删除" [ref=e201]:
+                          - img [ref=e202]
+                          - text: 删除
+                        - button "查看 晚餐完成 详情" [ref=e205]:
+                          - img [ref=e206]
+                    - paragraph [ref=e208]: 饭后 20 分钟外出。
+                - article [ref=e209]:
+                  - generic [ref=e210]: 10:18
+                  - generic [ref=e211]:
+                    - generic [ref=e212]:
+                      - generic [ref=e213]:
+                        - img [ref=e214]
+                        - text: 排便
+                      - strong [ref=e219]: 上午便便
+                      - generic [ref=e220]: 1次
+                      - generic [ref=e221]:
+                        - button "删除" [ref=e222]:
+                          - img [ref=e223]
+                          - text: 删除
+                        - button "查看 上午便便 详情" [ref=e226]:
+                          - img [ref=e227]
+                    - paragraph [ref=e229]: 状态正常。
+                - article [ref=e230]:
+                  - generic [ref=e231]: 09:20
+                  - generic [ref=e232]:
+                    - generic [ref=e233]:
+                      - generic [ref=e234]:
+                        - img [ref=e235]
+                        - text: 照片
+                      - strong [ref=e238]: 第一次认真看镜头
+                      - generic [ref=e239]:
+                        - button "删除" [ref=e240]:
+                          - img [ref=e241]
+                          - text: 删除
+                        - button "查看 第一次认真看镜头 详情" [ref=e244]:
+                          - img [ref=e245]
+                    - paragraph [ref=e247]: 耳朵还没完全立稳。
+                    - button "第一次认真看镜头" [ref=e248]:
+                      - img "第一次认真看镜头"
+                - article [ref=e249]:
+                  - generic [ref=e250]: 08:09
+                  - generic [ref=e251]:
+                    - generic [ref=e252]:
+                      - generic [ref=e253]:
+                        - img [ref=e254]
+                        - text: 如厕
+                      - strong [ref=e259]: 饭后尿尿
+                      - generic [ref=e260]: 1次
+                      - generic [ref=e261]:
+                        - button "删除" [ref=e262]:
+                          - img [ref=e263]
+                          - text: 删除
+                        - button "查看 饭后尿尿 详情" [ref=e266]:
+                          - img [ref=e267]
+                    - paragraph [ref=e269]: 比昨天更快进入状态。
+                - article [ref=e270]:
+                  - generic [ref=e271]: 07:35
+                  - generic [ref=e272]:
+                    - generic [ref=e273]:
+                      - generic [ref=e274]:
+                        - img [ref=e275]
+                        - text: 饮食
+                      - strong [ref=e278]: 早餐完成
+                      - generic [ref=e279]: 44g
+                      - generic [ref=e280]:
+                        - button "删除" [ref=e281]:
+                          - img [ref=e282]
+                          - text: 删除
+                        - button "查看 早餐完成 详情" [ref=e285]:
+                          - img [ref=e286]
+                    - paragraph [ref=e288]: 精神好，未挑食。
+            - generic [ref=e289]:
+              - generic [ref=e290]:
+                - strong [ref=e291]: 05/04
+                - text: 周一
+              - generic [ref=e292]:
+                - article [ref=e293]:
+                  - generic [ref=e294]: 22:08
+                  - generic [ref=e295]:
+                    - generic [ref=e296]:
+                      - generic [ref=e297]:
+                        - img [ref=e298]
+                        - text: 如厕
+                      - strong [ref=e303]: 睡前尿尿
+                      - generic [ref=e304]: 1次
+                      - generic [ref=e305]:
+                        - button "删除" [ref=e306]:
+                          - img [ref=e307]
+                          - text: 删除
+                        - button "查看 睡前尿尿 详情" [ref=e310]:
+                          - img [ref=e311]
+                    - paragraph [ref=e313]: 固定口令有效。
+                - article [ref=e314]:
+                  - generic [ref=e315]: 18:35
+                  - generic [ref=e316]:
+                    - generic [ref=e317]:
+                      - generic [ref=e318]:
+                        - img [ref=e319]
+                        - text: 饮食
+                      - strong [ref=e322]: 晚餐完成
+                      - generic [ref=e323]: 45g
+                      - generic [ref=e324]:
+                        - button "删除" [ref=e325]:
+                          - img [ref=e326]
+                          - text: 删除
+                        - button "查看 晚餐完成 详情" [ref=e329]:
+                          - img [ref=e330]
+                    - paragraph [ref=e332]: 食欲稳定。
+                - article [ref=e333]:
+                  - generic [ref=e334]: 14:20
+                  - generic [ref=e335]:
+                    - generic [ref=e336]:
+                      - generic [ref=e337]:
+                        - img [ref=e338]
+                        - text: 事件
+                      - strong [ref=e340]: 笼内安静训练
+                      - generic [ref=e341]:
+                        - button "删除" [ref=e342]:
+                          - img [ref=e343]
+                          - text: 删除
+                        - button "查看 笼内安静训练 详情" [ref=e346]:
+                          - img [ref=e347]
+                    - paragraph [ref=e349]: 午睡前哼叫 2 分钟后安静。
+                - article [ref=e350]:
+                  - generic [ref=e351]: 08:32
+                  - generic [ref=e352]:
+                    - generic [ref=e353]:
+                      - generic [ref=e354]:
+                        - img [ref=e355]
+                        - text: 排便
+                      - strong [ref=e360]: 便便成型
+                      - generic [ref=e361]: 1次
+                      - generic [ref=e362]:
+                        - button "删除" [ref=e363]:
+                          - img [ref=e364]
+                          - text: 删除
+                        - button "查看 便便成型 详情" [ref=e367]:
+                          - img [ref=e368]
+                    - paragraph [ref=e370]: 颜色正常，形态偏软但成型。
+                - article [ref=e371]:
+                  - generic [ref=e372]: 08:18
+                  - generic [ref=e373]:
+                    - generic [ref=e374]:
+                      - generic [ref=e375]:
+                        - img [ref=e376]
+                        - text: 如厕
+                      - strong [ref=e381]: 饭后尿尿
+                      - generic [ref=e382]: 1次
+                      - generic [ref=e383]:
+                        - button "删除" [ref=e384]:
+                          - img [ref=e385]
+                          - text: 删除
+                        - button "查看 饭后尿尿 详情" [ref=e388]:
+                          - img [ref=e389]
+                    - paragraph [ref=e391]: 在楼下草地完成，奖励及时。
+                - article [ref=e392]:
+                  - generic [ref=e393]: 07:38
+                  - generic [ref=e394]:
+                    - generic [ref=e395]:
+                      - generic [ref=e396]:
+                        - img [ref=e397]
+                        - text: 饮食
+                      - strong [ref=e400]: 早餐完成
+                      - generic [ref=e401]: 45g
+                      - generic [ref=e402]:
+                        - button "删除" [ref=e403]:
+                          - img [ref=e404]
+                          - text: 删除
+                        - button "查看 早餐完成 详情" [ref=e407]:
+                          - img [ref=e408]
+                    - paragraph [ref=e410]: 幼犬粮泡软，5 分钟吃完。
+            - generic [ref=e411]:
+              - generic [ref=e412]:
+                - strong [ref=e413]: 05/03
+                - text: 周日
+              - article [ref=e415]:
+                - generic [ref=e416]: 08:10
+                - generic [ref=e417]:
+                  - generic [ref=e418]:
+                    - generic [ref=e419]:
+                      - img [ref=e420]
+                      - text: 体重
+                    - strong [ref=e423]: 早餐前称重
+                    - generic [ref=e424]: 3.2kg
+                    - generic [ref=e425]:
+                      - button "删除" [ref=e426]:
+                        - img [ref=e427]
+                        - text: 删除
+                      - button "查看 早餐前称重 详情" [ref=e430]:
+                        - img [ref=e431]
+                  - paragraph [ref=e433]: 保持同一电子秤。
+            - generic [ref=e434]:
+              - generic [ref=e435]:
+                - strong [ref=e436]: 05/02
+                - text: 周六
+              - article [ref=e438]:
+                - generic [ref=e439]: 09:15
+                - generic [ref=e440]:
+                  - generic [ref=e441]:
+                    - generic [ref=e442]:
+                      - img [ref=e443]
+                      - text: 驱虫
+                    - strong [ref=e446]: 体外驱虫观察
+                    - generic [ref=e447]:
+                      - button "删除" [ref=e448]:
+                        - img [ref=e449]
+                        - text: 删除
+                      - button "查看 体外驱虫观察 详情" [ref=e452]:
+                        - img [ref=e453]
+                  - paragraph [ref=e455]: 滴剂后 48 小时内避免洗澡。
+            - generic [ref=e456]:
+              - generic [ref=e457]:
+                - strong [ref=e458]: 05/01
+                - text: 周五
+              - article [ref=e460]:
+                - generic [ref=e461]: 16:00
+                - generic [ref=e462]:
+                  - generic [ref=e463]:
+                    - generic [ref=e464]:
+                      - img [ref=e465]
+                      - text: 疫苗
+                    - strong [ref=e472]: 疫苗记录复核
+                    - generic [ref=e473]:
+                      - button "删除" [ref=e474]:
+                        - img [ref=e475]
+                        - text: 删除
+                      - button "查看 疫苗记录复核 详情" [ref=e478]:
+                        - img [ref=e479]
+                  - paragraph [ref=e481]: 已记录下一次加强针时间，实际以宠物医院为准。
+        - complementary [ref=e482]:
+          - generic [ref=e483]:
+            - generic [ref=e484]:
+              - paragraph [ref=e485]: 待办提醒
+              - text: 今日
+            - generic [ref=e486]:
+              - article [ref=e487]:
+                - generic [ref=e488]:
+                  - strong [ref=e489]: 08:05
+                  - text: 外出如厕
+                - paragraph [ref=e490]: 早餐后外出如厕
+                - generic [ref=e491]:
+                  - img [ref=e492]
+                  - text: 已到点
+                - generic [ref=e495]:
+                  - button "完成提醒" [ref=e496]:
+                    - img [ref=e497]
+                  - button "跳过提醒" [ref=e499]:
+                    - img [ref=e500]
+                  - button "暂停提醒" [ref=e502]:
+                    - img [ref=e503]
+              - article [ref=e505]:
+                - generic [ref=e506]:
+                  - strong [ref=e507]: 09:00
+                  - text: 驱虫
+                - paragraph [ref=e508]: 下一次体内外驱虫
+                - generic [ref=e509]:
+                  - img [ref=e510]
+                  - text: 已到点
+                - generic [ref=e513]:
+                  - button "完成提醒" [ref=e514]:
+                    - img [ref=e515]
+                  - button "跳过提醒" [ref=e517]:
+                    - img [ref=e518]
+                  - button "暂停提醒" [ref=e520]:
+                    - img [ref=e521]
+              - article [ref=e523]:
+                - generic [ref=e524]:
+                  - strong [ref=e525]: 12:30
+                  - text: 喂食
+                - paragraph [ref=e526]: 午间训练零食
+                - generic [ref=e527]:
+                  - img [ref=e528]
+                  - text: 已到点
+                - generic [ref=e531]:
+                  - button "完成提醒" [ref=e532]:
+                    - img [ref=e533]
+                  - button "跳过提醒" [ref=e535]:
+                    - img [ref=e536]
+                  - button "暂停提醒" [ref=e538]:
+                    - img [ref=e539]
+          - generic [ref=e541]:
+            - generic [ref=e542]:
+              - img [ref=e544]
+              - generic [ref=e546]:
+                - paragraph [ref=e547]: 豆包今日养育简报
+                - text: AI 教练基于最近记录给出保守建议
+            - generic [ref=e548]:
+              - paragraph [ref=e549]: 做得好的地方：最近体重记录为 3.2kg，建议每周固定时间称重。
+              - paragraph [ref=e550]: 下一步建议：今天饮食记录偏少，建议补齐早中晚喂食量，方便观察食欲。 幼犬膀胱控制还在发育，醒后、饭后、玩耍后都可以安排一次如厕。
+              - paragraph [ref=e551]: 健康相关判断不能替代兽医诊断；若持续呕吐、腹泻、精神差或拒食，请及时联系兽医。
+              - paragraph
+              - paragraph [ref=e552]: 当前使用本地规则生成；配置 OPENAI_API_KEY 后会启用在线 AI 教练。
+            - button "生成今日建议" [ref=e553]:
+              - img [ref=e554]
+              - text: 生成今日建议
+    - region "手机端今日工作台" [ref=e559]:
+      - generic [ref=e560]:
+        - generic [ref=e561]:
+          - text: PetDaily
+          - strong [ref=e562]: 豆包
+        - generic [ref=e563]:
+          - generic [ref=e564]:
+            - term [ref=e565]: 今日
+            - definition [ref=e566]: "2"
+          - generic [ref=e567]:
+            - term [ref=e568]: 体重
+            - definition [ref=e569]: 3.2kg
+      - generic [ref=e570]:
+        - generic [ref=e571]:
+          - generic [ref=e572]:
+            - paragraph [ref=e573]: 快捷事件
+            - text: 数字键 1-5 可快速打开预填表单
+          - button "配置快捷事件" [ref=e574]:
+            - img [ref=e575]
+            - text: 配置
+        - generic [ref=e578]:
+          - button "1早餐单点" [ref=e579]:
+            - text: "1"
+            - strong [ref=e580]: 早餐
+            - text: 单点
+          - button "2晚餐单点" [ref=e581]:
+            - text: "2"
+            - strong [ref=e582]: 晚餐
+            - text: 单点
+          - button "3尿尿单点" [ref=e583]:
+            - text: "3"
+            - strong [ref=e584]: 尿尿
+            - text: 单点
+          - button "4便便单点" [ref=e585]:
+            - text: "4"
+            - strong [ref=e586]: 便便
+            - text: 单点
+          - button "5训练时段" [ref=e587]:
+            - text: "5"
+            - strong [ref=e588]: 训练
+            - text: 时段
+      - generic [ref=e589]:
+        - generic [ref=e590]:
+          - strong [ref=e591]: 提醒
+          - text: 优先显示到点事项
+        - generic [ref=e592]:
+          - article [ref=e593]:
+            - generic [ref=e594]:
+              - strong [ref=e595]: 08:05
+              - text: 外出如厕
+            - paragraph [ref=e596]: 早餐后外出如厕
+            - generic [ref=e597]:
+              - img [ref=e598]
+              - text: 已到点
+            - generic [ref=e601]:
+              - button "完成提醒" [ref=e602]:
+                - img [ref=e603]
+              - button "跳过提醒" [ref=e605]:
+                - img [ref=e606]
+              - button "暂停提醒" [ref=e608]:
+                - img [ref=e609]
+          - article [ref=e611]:
+            - generic [ref=e612]:
+              - strong [ref=e613]: 09:00
+              - text: 驱虫
+            - paragraph [ref=e614]: 下一次体内外驱虫
+            - generic [ref=e615]:
+              - img [ref=e616]
+              - text: 已到点
+            - generic [ref=e619]:
+              - button "完成提醒" [ref=e620]:
+                - img [ref=e621]
+              - button "跳过提醒" [ref=e623]:
+                - img [ref=e624]
+              - button "暂停提醒" [ref=e626]:
+                - img [ref=e627]
+      - generic [ref=e629]:
+        - generic [ref=e630]:
+          - generic [ref=e631]:
+            - strong [ref=e632]: 单日日历
+            - generic [ref=e633]: 2 条
+          - generic [ref=e634]:
+            - generic [ref=e635]:
+              - button "日" [ref=e636]
+              - button "周" [ref=e637]
+            - generic [ref=e638]:
+              - button "条目" [ref=e639]
+              - button "日历" [ref=e640]
+          - generic [ref=e643]:
+            - generic [ref=e646]:
+              - strong [ref=e647]: 今天
+              - emphasis [ref=e648]: 周日
+            - generic [ref=e651]:
+              - strong [ref=e652]: 05/05
+              - emphasis [ref=e653]: 周二
+            - generic [ref=e656]:
+              - strong [ref=e657]: 05/04
+              - emphasis [ref=e658]: 周一
+            - generic [ref=e661]:
+              - strong [ref=e662]: 05/03
+              - emphasis [ref=e663]: 周日
+            - generic [ref=e666]:
+              - strong [ref=e667]: 05/02
+              - emphasis [ref=e668]: 周六
+            - generic [ref=e671]:
+              - strong [ref=e672]: 05/01
+              - emphasis [ref=e673]: 周五
+        - generic "多日纵向时间分布" [ref=e674]:
+          - generic [ref=e675]:
+            - generic [ref=e676]: 持续时段
+            - generic [ref=e677]: 单点事件
+          - generic [ref=e679]:
+            - generic [ref=e680]:
+              - generic [ref=e681]:
+                - text: AM
+                - strong [ref=e682]: "12"
+              - generic [ref=e683]:
+                - text: AM
+                - strong [ref=e684]: "01"
+              - generic [ref=e685]:
+                - text: AM
+                - strong [ref=e686]: "02"
+              - generic [ref=e687]:
+                - text: AM
+                - strong [ref=e688]: "03"
+              - generic [ref=e689]:
+                - text: AM
+                - strong [ref=e690]: "04"
+              - generic [ref=e691]:
+                - text: AM
+                - strong [ref=e692]: "05"
+              - generic [ref=e693]:
+                - text: AM
+                - strong [ref=e694]: "06"
+              - generic [ref=e695]:
+                - text: AM
+                - strong [ref=e696]: "07"
+              - generic [ref=e697]:
+                - text: AM
+                - strong [ref=e698]: "08"
+              - generic [ref=e699]:
+                - text: AM
+                - strong [ref=e700]: "09"
+              - generic [ref=e701]:
+                - text: AM
+                - strong [ref=e702]: "10"
+              - generic [ref=e703]:
+                - text: AM
+                - strong [ref=e704]: "11"
+              - generic [ref=e705]:
+                - text: PM
+                - strong [ref=e706]: "12"
+              - generic [ref=e707]:
+                - text: PM
+                - strong [ref=e708]: "01"
+              - generic [ref=e709]:
+                - text: PM
+                - strong [ref=e710]: "02"
+              - generic [ref=e711]:
+                - text: PM
+                - strong [ref=e712]: "03"
+              - generic [ref=e713]:
+                - text: PM
+                - strong [ref=e714]: "04"
+              - generic [ref=e715]:
+                - text: PM
+                - strong [ref=e716]: "05"
+              - generic [ref=e717]:
+                - text: PM
+                - strong [ref=e718]: "06"
+              - generic [ref=e719]:
+                - text: PM
+                - strong [ref=e720]: "07"
+              - generic [ref=e721]:
+                - text: PM
+                - strong [ref=e722]: "08"
+              - generic [ref=e723]:
+                - text: PM
+                - strong [ref=e724]: "09"
+              - generic [ref=e725]:
+                - text: PM
+                - strong [ref=e726]: "10"
+              - generic [ref=e727]:
+                - text: PM
+                - strong [ref=e728]: "11"
+            - generic [ref=e731]: 现在 23:18
+            - generic [ref=e732]:
+              - button "今天 08:00 上午睡觉" [ref=e733]: 上午睡觉
+              - button "今天 16:46 早餐完成" [ref=e734]: 早餐完成
+  - button "新增事件" [ref=e735]:
+    - img [ref=e736]
+  - img [ref=e739]
+  - navigation "主导航" [ref=e740]:
+    - generic [ref=e742]:
+      - generic [ref=e743]:
+        - img [ref=e746]
+        - generic [ref=e749]: 时间轴
+      - generic [ref=e750]:
+        - img [ref=e753]
+        - generic [ref=e755]: 监听
+      - generic [ref=e756]:
+        - img [ref=e759]
+        - generic [ref=e762]: 洞察
+      - generic [ref=e763]:
+        - img [ref=e766]
+        - generic [ref=e769]: 我的

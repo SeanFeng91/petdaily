@@ -10,9 +10,12 @@ export const metadata = {
     statusBarStyle: "default"
   },
   icons: {
-    icon: "/icons/petdaily-icon.svg",
-    shortcut: "/icons/petdaily-icon-192.png",
-    apple: "/icons/petdaily-icon-192.png"
+    icon: [
+      { url: "/api/app-icon?size=192" },
+      { url: "/api/app-icon?size=512" }
+    ],
+    shortcut: "/api/app-icon?size=192",
+    apple: "/api/app-icon?size=180"
   }
 };
 

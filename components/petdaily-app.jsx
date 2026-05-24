@@ -73,18 +73,6 @@ const eventIcons = {
   NOTE: BookOpen
 };
 
-const eventDisplayTypes = {
-  FOOD: "point",
-  POTTY: "point",
-  STOOL: "point",
-  WEIGHT: "point",
-  VACCINE: "point",
-  DEWORM: "point",
-  PHOTO: "point",
-  BARK: "range",
-  NOTE: "range"
-};
-
 const timelinePlotRows = [
   { id: "sleep", label: "睡觉", icon: Moon, types: new Set(["NOTE"]), tone: "sleep", matcher: /睡|午睡|休息|安静|笼/i },
   { id: "food", label: "进食", icon: Utensils, types: new Set(["FOOD"]), tone: "food" },
@@ -94,67 +82,112 @@ const timelinePlotRows = [
   { id: "care", label: "护理", icon: HeartPulse, types: new Set(["WEIGHT", "VACCINE", "DEWORM", "PHOTO", "BARK"]), tone: "care" }
 ];
 
-const SHORTCUT_STORAGE_KEY = "petdaily.eventShortcuts.v1";
+const LEGACY_SHORTCUT_STORAGE_KEY = "petdaily.eventShortcuts.v1";
+const SHORTCUT_STORAGE_KEY = "petdaily.eventShortcuts.v2";
 const APP_ICON_STORAGE_KEY = "petdaily.appIcon.v1";
-
 const defaultEventShortcuts = [
-  { id: "breakfast", enabled: true, label: "早餐", type: "FOOD", title: "早餐完成", amount: "45", note: "" },
-  { id: "dinner", enabled: true, label: "晚餐", type: "FOOD", title: "晚餐完成", amount: "45", note: "" },
-  { id: "pee", enabled: true, label: "尿尿", type: "POTTY", title: "外出尿尿", amount: "1", note: "" },
-  { id: "poop", enabled: true, label: "便便", type: "STOOL", title: "便便记录", amount: "1", note: "" },
-  { id: "weight", enabled: true, label: "称重", type: "WEIGHT", title: "体重记录", amount: "", note: "早餐前称重。" },
-  { id: "training", enabled: true, label: "训练", type: "NOTE", title: "训练观察", amount: "", note: "" },
-  { id: "vaccine", enabled: false, label: "疫苗", type: "VACCINE", title: "疫苗记录", amount: "", note: "" },
-  { id: "deworm", enabled: false, label: "驱虫", type: "DEWORM", title: "驱虫记录", amount: "", note: "" }
+  { id: "breakfast", enabled: true, label: "早餐", note: "", mode: "point" },
+  { id: "dinner", enabled: true, label: "晚餐", note: "", mode: "point" },
+  { id: "pee", enabled: true, label: "尿尿", note: "", mode: "point" },
+  { id: "poop", enabled: true, label: "便便", note: "", mode: "point" },
+  { id: "training", enabled: true, label: "训练", note: "", mode: "range" },
+  { id: "nap", enabled: false, label: "睡觉", note: "", mode: "range" },
+  { id: "weight", enabled: false, label: "称重", note: "早餐前称重。", mode: "point" },
+  { id: "vaccine", enabled: false, label: "疫苗", note: "", mode: "point" },
+  { id: "deworm", enabled: false, label: "驱虫", note: "", mode: "point" }
 ];
+
+function createEventPresetId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return `preset_${crypto.randomUUID()}`;
+  return `preset_${Date.now()}_${Math.round(Math.random() * 1000)}`;
+}
 
 function updateAppIconLinks(iconUrl) {
   if (typeof document === "undefined" || !iconUrl) return;
-  const selectors = ['link[rel="icon"]', 'link[rel="apple-touch-icon"]'];
-  for (const selector of selectors) {
-    let link = document.querySelector(selector);
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = selector.includes("apple") ? "apple-touch-icon" : "icon";
-      document.head.appendChild(link);
-    }
-    link.href = iconUrl;
+  const versionedUrl = iconUrl.startsWith("data:")
+    ? iconUrl
+    : `${iconUrl}${iconUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+  const iconType = iconUrl.startsWith("data:image/png") ? "image/png" : iconUrl.startsWith("data:image/jpeg") ? "image/jpeg" : undefined;
+
+  const existingIconLinks = [...document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]')];
+  const iconLinks = existingIconLinks.length ? existingIconLinks : [document.createElement("link")];
+  for (const link of iconLinks) {
+    if (!link.parentNode) document.head.appendChild(link);
+    link.rel = "icon";
+    link.href = versionedUrl;
+    if (iconType) link.type = iconType;
+    else link.removeAttribute("type");
   }
+
+  let appleLink = document.querySelector('link[rel="apple-touch-icon"]');
+  if (!appleLink) {
+    appleLink = document.createElement("link");
+    appleLink.rel = "apple-touch-icon";
+    appleLink.sizes = "180x180";
+    document.head.appendChild(appleLink);
+  }
+  appleLink.href = versionedUrl;
+  if (iconType) appleLink.type = iconType;
+  else appleLink.removeAttribute("type");
+
+  let manifestLink = document.querySelector('link[rel="manifest"]');
+  if (!manifestLink) {
+    manifestLink = document.createElement("link");
+    manifestLink.rel = "manifest";
+    document.head.appendChild(manifestLink);
+  }
+
+  try {
+    const manifestIconUrl = versionedUrl.startsWith("data:") ? versionedUrl : new URL(versionedUrl, window.location.origin).href;
+    const manifest = {
+      name: "PetDaily 白板日记",
+      short_name: "PetDaily",
+      description: "手机优先的宠物日常记录、提醒和成长洞察工具。",
+      start_url: new URL("/", window.location.origin).href,
+      scope: new URL("/", window.location.origin).href,
+      display: "standalone",
+      background_color: "#f7faf8",
+      theme_color: "#18231f",
+      orientation: "portrait",
+      icons: [
+        { src: manifestIconUrl, sizes: "192x192", ...(iconType ? { type: iconType } : {}), purpose: "any" },
+        { src: manifestIconUrl, sizes: "512x512", ...(iconType ? { type: iconType } : {}), purpose: "any maskable" }
+      ]
+    };
+    const previousManifestUrl = window.__petdailyDynamicManifestUrl;
+    const nextManifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" }));
+    window.__petdailyDynamicManifestUrl = nextManifestUrl;
+    manifestLink.href = nextManifestUrl;
+    if (previousManifestUrl) URL.revokeObjectURL(previousManifestUrl);
+  } catch {
+    manifestLink.href = "/manifest.webmanifest";
+  }
+}
+
+function sanitizeShortcutLabel(value, fallback = "事件") {
+  const label = String(value || fallback).trim().slice(0, 12);
+  return label || fallback;
 }
 
 function normalizeShortcuts(value) {
   if (!Array.isArray(value)) return defaultEventShortcuts;
+  if (!value.length) return [];
   const byId = new Map(defaultEventShortcuts.map((item) => [item.id, item]));
   const merged = value
     .filter((item) => item && item.id)
     .map((item) => {
       const fallback = byId.get(item.id) || defaultEventShortcuts[0];
-      const type = EVENT_TYPES[item.type] ? item.type : fallback.type;
+      const mode = item.mode === "range" ? "range" : "point";
       return {
         id: String(item.id),
         enabled: item.enabled !== false,
-        label: String(item.label || fallback.label).slice(0, 8),
-        type,
-        title: String(item.title || item.label || fallback.title).slice(0, 40),
-        amount: item.amount == null ? "" : String(item.amount).slice(0, 12),
-        note: item.note == null ? "" : String(item.note).slice(0, 80)
+        label: sanitizeShortcutLabel(item.label || item.title, fallback.label),
+        note: item.note == null ? "" : String(item.note).slice(0, 80),
+        mode
       };
     });
 
   return merged.length ? merged.slice(0, 12) : defaultEventShortcuts;
-}
-
-function shortcutToTimelinePayload(shortcut, petId) {
-  const meta = EVENT_TYPES[shortcut.type] || EVENT_TYPES.NOTE;
-  return {
-    petId,
-    type: shortcut.type,
-    title: shortcut.title || shortcut.label || meta.label,
-    note: shortcut.note || "",
-    amount: shortcut.amount || "",
-    unit: meta.unit || "",
-    happenedAt: new Date().toISOString()
-  };
 }
 
 function getTodayStart() {
@@ -270,6 +303,26 @@ function buildTimelineDayGroups(events) {
   return groups;
 }
 
+function buildRecentTimelineGroups(events, days = 7) {
+  const existing = new Map(buildTimelineDayGroups(events).map((group) => [group.key, group]));
+  const groups = [];
+
+  for (let offset = 0; offset < days; offset += 1) {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - offset);
+    const key = getTimelineDateKey(date);
+    groups.push(existing.get(key) || {
+      key,
+      label: formatDateKeyLabel(key),
+      subLabel: formatDateKeyWeekday(key),
+      events: []
+    });
+  }
+
+  return groups;
+}
+
 function formatTimelineDate(value) {
   return new Intl.DateTimeFormat("zh-CN", {
     month: "2-digit",
@@ -306,6 +359,14 @@ function getEventMetadata(event) {
   return parseJsonObject(event?.metadata);
 }
 
+function isImplicitRangeEvent(event) {
+  if (!event) return false;
+  if (event.type === "BARK") return true;
+  if (event.type !== "NOTE") return false;
+  const title = `${event.title || ""} ${event.note || ""}`;
+  return /睡|午睡|休息|安静|笼|玩|训练|游戏|外出|散步/i.test(title);
+}
+
 function getEventEndTime(event) {
   const metadata = getEventMetadata(event);
   const start = new Date(event.happenedAt).getTime();
@@ -318,7 +379,7 @@ function getEventEndTime(event) {
   const createdAt = event.createdAt ? new Date(event.createdAt).getTime() : null;
   if (event.type === "NOTE" && Number.isFinite(createdAt) && createdAt > start + 10 * 60000) return createdAt;
 
-  if (eventDisplayTypes[event.type] === "range") {
+  if (isImplicitRangeEvent(event)) {
     return start + (event.type === "BARK" ? 6 * 60000 : 30 * 60000);
   }
 
@@ -328,7 +389,7 @@ function getEventEndTime(event) {
 function hasEventTimeRange(event) {
   if (!event) return false;
   const metadata = getEventMetadata(event);
-  return eventDisplayTypes[event.type] === "range" || Boolean(metadata.endedAt || metadata.durationMs || event.durationMs);
+  return isImplicitRangeEvent(event) || Boolean(metadata.endedAt || metadata.durationMs || event.durationMs);
 }
 
 function getEventEndInputValue(event) {
@@ -367,26 +428,42 @@ function getDayProgress(value) {
   return ((date.getHours() * 60 + date.getMinutes()) / 1440) * 100;
 }
 
-function getDayWindowLabel(index) {
-  const hour = String(index * 4).padStart(2, "0");
-  return `${hour}:00`;
+function formatDayDistributionHour(hour) {
+  const meridiem = hour < 12 ? "AM" : "PM";
+  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
+  return { meridiem, label: String(normalizedHour).padStart(2, "0") };
+}
+
+function getVisibleDayDistributionGroups(groups, focusKey, limit = 4) {
+  if (!groups.length) return [];
+  const safeLimit = Math.max(1, limit);
+  const focusIndex = focusKey ? groups.findIndex((group) => group.key === focusKey) : -1;
+
+  if (focusIndex >= 0) {
+    const start = Math.max(0, Math.min(focusIndex, Math.max(0, groups.length - safeLimit)));
+    return [...groups.slice(start, start + safeLimit)].reverse();
+  }
+
+  return [...groups.slice(0, safeLimit)].reverse();
 }
 
 function getDerivedData(data) {
   const timelineEvents = [...data.timelineEvents].sort(
     (a, b) => new Date(b.happenedAt) - new Date(a.happenedAt)
   );
+  const journalEvents = timelineEvents.filter((event) => event.type !== "BARK");
   const weightRecords = [...data.weightRecords].sort(
     (a, b) => new Date(a.measuredAt) - new Date(b.measuredAt)
   );
   const todayStart = getTodayStart();
-  const todayEvents = timelineEvents.filter((event) => new Date(event.happenedAt) >= todayStart);
+  const todayEvents = journalEvents.filter((event) => new Date(event.happenedAt) >= todayStart);
   const latestWeight = weightRecords.at(-1);
   const previousWeight = weightRecords.at(-2);
   const expenseSummary = getExpenseSummary(data.expenses);
 
   return {
     timelineEvents,
+    journalEvents,
     weightRecords,
     todayEvents,
     latestWeight,
@@ -397,6 +474,10 @@ function getDerivedData(data) {
     activeReminders: data.reminders.filter((item) => item.active && !isSameDay(item.lastDoneAt) && !isSameDay(item.lastSkippedAt)),
     expenseSummary
   };
+}
+
+function getShortcutTone(shortcut) {
+  return shortcut.mode === "range" ? "sky" : "mint";
 }
 
 function NavButton({ item, selected, onClick }) {
@@ -531,15 +612,15 @@ function TimelineStream({ events, onDelete, onOpenDetail, onOpenPhoto }) {
                       ) : null}
                       {onOpenDetail || onDelete ? (
                         <div className="timelineEntryActions">
-                          {onOpenDetail ? (
-                            <button className="miniActionButton" type="button" onClick={() => onOpenDetail(event)}>
-                              详情
-                            </button>
-                          ) : null}
                           {onDelete ? (
                             <button className="miniDangerButton" type="button" onClick={() => onDelete(event)}>
                               <Trash2 size={15} />
                               删除
+                            </button>
+                          ) : null}
+                          {onOpenDetail ? (
+                            <button className="miniActionButton iconOnlyAction timelineChevronButton" type="button" onClick={() => onOpenDetail(event)} aria-label={`查看 ${event.title} 详情`}>
+                              <ChevronRight size={16} />
                             </button>
                           ) : null}
                         </div>
@@ -567,31 +648,21 @@ function TimelineStream({ events, onDelete, onOpenDetail, onOpenPhoto }) {
 }
 
 function DesktopDayDistribution({ events, onOpenDetail }) {
-  const { label, dayEvents } = useMemo(() => {
-    const todayKey = getTodayDateKey();
-    const groups = buildTimelineDayGroups(events);
-    const todayGroup = groups.find((group) => group.key === todayKey && group.events.length);
-    const fallbackGroup = groups.find((group) => group.events.length);
-    const group = todayGroup || fallbackGroup;
-    return {
-      label: group ? `${group.label} · ${group.subLabel}` : "暂无记录",
-      dayEvents: group ? [...group.events].sort((a, b) => new Date(a.happenedAt) - new Date(b.happenedAt)) : []
-    };
-  }, [events]);
+  const groups = useMemo(() => buildTimelineDayGroups(events), [events]);
 
   return (
     <section className="contentPanel desktopDayDistribution">
       <div className="sectionHeading">
         <p>日分布</p>
-        <span>{label}</span>
+        <span>最近几天的纵向分布</span>
       </div>
-      <DayDistributionTimeline events={dayEvents} onOpenDetail={onOpenDetail} />
+      <DayDistributionTimeline groups={groups} focusKey={getTodayDateKey()} onOpenDetail={onOpenDetail} />
     </section>
   );
 }
 
-function ShortcutGrid({ shortcuts, busyId, onTrigger, onConfigure }) {
-  const visibleShortcuts = shortcuts.filter((shortcut) => shortcut.enabled);
+function ShortcutGrid({ shortcuts, onTrigger, onConfigure }) {
+  const visibleShortcuts = shortcuts.filter((shortcut) => shortcut.enabled && shortcut.label?.trim());
 
   return (
     <section className="shortcutPanel">
@@ -600,7 +671,7 @@ function ShortcutGrid({ shortcuts, busyId, onTrigger, onConfigure }) {
           <p>快捷事件</p>
           <span>
             {visibleShortcuts.length
-              ? `数字键 1-${Math.min(visibleShortcuts.length, 9)} 可直接触发`
+              ? `数字键 1-${Math.min(visibleShortcuts.length, 9)} 可快速打开预填表单`
               : "到我的页面启用常用事件"}
           </span>
         </div>
@@ -611,23 +682,16 @@ function ShortcutGrid({ shortcuts, busyId, onTrigger, onConfigure }) {
       </div>
       <div className="shortcutGrid">
         {visibleShortcuts.length ? visibleShortcuts.map((shortcut, index) => {
-          const meta = EVENT_TYPES[shortcut.type] || EVENT_TYPES.NOTE;
           return (
             <button
-              className={`shortcutButton tone-${meta.tone}`}
+              className={`shortcutButton tone-${getShortcutTone(shortcut)}`}
               type="button"
               key={shortcut.id}
               onClick={() => onTrigger(shortcut)}
-              disabled={busyId === shortcut.id}
             >
               <span>{index < 9 ? index + 1 : ""}</span>
               <strong>{shortcut.label}</strong>
-              {shortcut.amount ? (
-                <small>
-                  {shortcut.amount}
-                  {meta.unit}
-                </small>
-              ) : null}
+              <small>{shortcut.mode === "range" ? "时段" : "单点"}</small>
             </button>
           );
         }) : <p className="mutedText shortcutEmpty">还没有启用的快捷事件。</p>}
@@ -695,6 +759,7 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
   const [editAmount, setEditAmount] = useState("");
   const [editStartAt, setEditStartAt] = useState("");
   const [editEndAt, setEditEndAt] = useState("");
+  const [editRangeEnabled, setEditRangeEnabled] = useState(false);
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -705,6 +770,7 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
       setEditAmount(event.amount != null ? String(event.amount) : "");
       setEditStartAt(localDateTimeValue(event.happenedAt));
       setEditEndAt(getEventEndInputValue(event));
+      setEditRangeEnabled(hasEventTimeRange(event));
       setEditError("");
       setEditing(false);
     }
@@ -713,7 +779,8 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
   if (!event) return null;
   const Icon = eventIcons[event.type] || BookOpen;
   const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
-  const supportsRange = hasEventTimeRange(event);
+  const supportsRange = editRangeEnabled;
+  const displaysRange = hasEventTimeRange(event);
   const showAmountField = event.amount != null || Boolean(meta.unit);
 
   async function saveEdit() {
@@ -735,9 +802,12 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
         nextMetadata.endedAt = endAt.toISOString();
         nextMetadata.durationMs = Math.max(60000, endAt.getTime() - startAt.getTime());
       } else {
-        delete nextMetadata.endedAt;
-        delete nextMetadata.durationMs;
+        setEditError("开启持续时段后，请补充结束时间。");
+        return;
       }
+    } else {
+      delete nextMetadata.endedAt;
+      delete nextMetadata.durationMs;
     }
 
     setEditError("");
@@ -749,7 +819,7 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
         note: editNote,
         amount: showAmountField ? editAmount : undefined,
         happenedAt: startAt.toISOString(),
-        metadata: supportsRange ? nextMetadata : undefined
+        metadata: nextMetadata
       });
       setEditing(false);
       onClose?.();
@@ -786,6 +856,12 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
         </div>
         {editing ? (
           <>
+            <div className="mobileEventFact">
+              <span>记录方式</span>
+              <button className="miniActionButton" type="button" onClick={() => setEditRangeEnabled((current) => !current)}>
+                {editRangeEnabled ? "持续时段" : "单点事件"}
+              </button>
+            </div>
             <div className="formGridTwo">
               <label>
                 开始
@@ -810,7 +886,7 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
         ) : (
           <>
             <div className="mobileEventFact">
-              <span>{supportsRange ? "时段" : "时间"}</span>
+              <span>{displaysRange ? "时段" : "时间"}</span>
               <strong>{formatEventRange(event)}</strong>
             </div>
             {event.amount != null ? (
@@ -848,124 +924,229 @@ function MobileEventDetailPopup({ event, onClose, onDelete, onEdit, onOpenPhoto 
   );
 }
 
-function DayDistributionTimeline({ events, onOpenDetail }) {
-  if (!events.length) {
-    return <p className="mutedText mobileEmptyText">这个日期还没有形成分布。新增记录后会自动排到一天刻度上。</p>;
+function DayDistributionTimeline({ groups, focusKey, onOpenDetail, limit = 4, showHeaders = true, className = "", emptyText, includeEmptyGroups = false }) {
+  const scrollerRef = useRef(null);
+  const sourceGroups = useMemo(
+    () => (includeEmptyGroups ? groups || [] : (groups || []).filter((group) => group.events.length || isTodayKey(group.key))),
+    [groups, includeEmptyGroups]
+  );
+  const visibleGroups = useMemo(
+    () => getVisibleDayDistributionGroups(sourceGroups, focusKey, limit),
+    [focusKey, limit, sourceGroups]
+  );
+  const hasEvents = visibleGroups.some((group) => group.events.length);
+
+  const hours = Array.from({ length: 24 }, (_, hour) => hour);
+  const now = new Date();
+  const currentLineTop = getDayProgress(now);
+  const showCurrentLine = visibleGroups.some((group) => isTodayKey(group.key));
+  const activeGroup = visibleGroups.find((group) => group.key === focusKey) || visibleGroups.at(-1) || visibleGroups[0];
+
+  const anchorProgress = useMemo(() => {
+    if (showCurrentLine && activeGroup && isTodayKey(activeGroup.key)) {
+      return Math.max(0, currentLineTop - 8);
+    }
+
+    const firstEvent = [...(activeGroup?.events || [])]
+      .sort((left, right) => new Date(left.happenedAt) - new Date(right.happenedAt))
+      .at(0);
+    return firstEvent ? Math.max(0, getDayProgress(new Date(firstEvent.happenedAt)) - 8) : 0;
+  }, [activeGroup, currentLineTop, showCurrentLine]);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || scroller.scrollHeight <= scroller.clientHeight + 8) return;
+    const targetTop = Math.max(0, (scroller.scrollHeight - scroller.clientHeight) * (anchorProgress / 100) - scroller.clientHeight * 0.18);
+    scroller.scrollTo({ top: targetTop, behavior: "smooth" });
+  }, [anchorProgress, focusKey]);
+
+  if (!hasEvents) {
+    return <p className="mutedText mobileEmptyText">{emptyText || "这个日期还没有形成分布。新增记录后会自动排到一天刻度上。"}</p>;
   }
 
-  const rows = timelinePlotRows.map((row) => ({
-    ...row,
-    events: events
-      .filter((event) => getTimelinePlotRow(event).id === row.id)
-      .sort((a, b) => new Date(a.happenedAt) - new Date(b.happenedAt))
-  }));
-
   return (
-    <div className="dayDistribution" aria-label="一天事件分布">
-      <div className="dayDistributionScale" aria-hidden="true">
-        {Array.from({ length: 7 }, (_, index) => (
-          <span key={index} style={{ left: `${(index / 6) * 100}%` }}>
-            {getDayWindowLabel(index)}
-          </span>
-        ))}
-      </div>
-      <div className="dayDistributionGrid">
-        {rows.map((row) => {
-          const RowIcon = row.icon;
-          return (
-            <div className={`dayDistributionRow tone-${row.tone}`} key={row.id}>
-              <div className="dayDistributionLabel">
-                <RowIcon size={14} />
-                <span>{row.label}</span>
-              </div>
-              <div className="dayDistributionTrack">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <i key={index} style={{ left: `${(index / 6) * 100}%` }} />
-                ))}
-                {row.events.map((event) => {
-                  const start = new Date(event.happenedAt).getTime();
-                  const end = getEventEndTime(event);
-                  const left = getDayProgress(event.happenedAt);
-                  const endDate = new Date(end);
-                  const right = Math.max(left, getDayProgress(endDate));
-                  const isRange = right - left >= 1.5;
-
-                  return (
-                    <button
-                      className={`dayDistributionMark ${isRange ? "range" : "point"}`}
-                      type="button"
-                      key={event.id}
-                      style={isRange ? { left: `${left}%`, width: `${Math.max(3, right - left)}%` } : { left: `${left}%` }}
-                      onClick={() => onOpenDetail?.(event)}
-                      aria-label={`${formatTimelineTime(event.happenedAt)} ${event.title}`}
-                      title={`${formatTimelineTime(event.happenedAt)} ${event.title}`}
-                    >
-                      <span>{event.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div className={`dayDistributionBoard ${className}`.trim()} aria-label="多日纵向时间分布">
       <div className="dayDistributionLegend">
-        <span><i className="point" />点状事件</span>
-        <span><i className="range" />持续片段</span>
+        <span><i className="range" />持续时段</span>
+        <span><i className="point" />单点事件</span>
+      </div>
+      <div className="dayDistributionScroller" ref={scrollerRef}>
+        <div className={`dayDistributionMatrix ${showHeaders ? "" : "headless"}`} style={{ "--day-column-count": String(visibleGroups.length) }}>
+          {showHeaders ? (
+            <div className="dayDistributionCorner">
+              <strong>Time</strong>
+            </div>
+          ) : null}
+          {showHeaders
+            ? visibleGroups.map((group, index) => (
+                <div
+                  className={`dayDistributionDayHead ${group.key === focusKey ? "selected" : ""}`}
+                  key={`head-${group.key}`}
+                  style={{ gridColumn: index + 2 }}
+                >
+                  <strong>{group.label}</strong>
+                  <span>{group.subLabel}</span>
+                </div>
+              ))
+            : null}
+
+          <div className="dayDistributionTimeAxis" aria-hidden="true">
+            {hours.map((hour) => {
+              const { meridiem, label } = formatDayDistributionHour(hour);
+              return (
+                <div className="dayDistributionHour" key={hour} style={{ top: `${(hour / 24) * 100}%` }}>
+                  <span>{meridiem}</span>
+                  <strong>{label}</strong>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="dayDistributionTracksOverlay">
+            {showCurrentLine ? (
+              <div className="dayDistributionNowLine" style={{ top: `${currentLineTop}%` }}>
+                <span>现在 {formatTimelineTime(now)}</span>
+              </div>
+            ) : null}
+          </div>
+
+          {visibleGroups.map((group, index) => (
+            <div
+              className={`dayDistributionDayTrack ${group.key === focusKey ? "selected" : ""}`}
+              key={group.key}
+              style={{ gridColumn: index + 2 }}
+            >
+              {hours.map((hour) => (
+                <i className="dayDistributionHourLine" key={`${group.key}-${hour}`} style={{ top: `${(hour / 24) * 100}%` }} />
+              ))}
+              {group.events.map((event) => {
+                const row = getTimelinePlotRow(event);
+                const dayStart = new Date(`${group.key}T00:00`);
+                const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+                const start = new Date(event.happenedAt);
+                const end = new Date(getEventEndTime(event));
+                const top = getDayProgress(start);
+                const endProgress =
+                  end >= dayEnd ? 100 : end <= dayStart ? top : getDayProgress(end);
+                const isRange = hasEventTimeRange(event) && endProgress > top + 0.35;
+
+                return (
+                  <button
+                    className={`dayDistributionEvent ${isRange ? "range" : "point"} tone-${row.tone}`}
+                    type="button"
+                    key={event.id}
+                    style={isRange ? { top: `${top}%`, height: `${Math.max(1.1, endProgress - top)}%` } : { top: `${top}%` }}
+                    onClick={() => onOpenDetail?.(event)}
+                    aria-label={`${group.label} ${formatTimelineTime(event.happenedAt)} ${event.title}`}
+                    title={`${group.label} ${formatTimelineTime(event.happenedAt)} ${event.title}`}
+                  >
+                    <span>{event.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-function MobileTimelineList({ events, onDelete, onOpenDetail, onOpenPhoto }) {
+function MobileTimelineEntry({ event, onDelete, onOpenDetail, onOpenPhoto }) {
+  const Icon = eventIcons[event.type] || BookOpen;
+  const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
+
+  return (
+    <SwipeAction
+      key={event.id}
+      rightActions={onDelete ? [{ key: "delete", text: "删除", color: "danger", onClick: () => onDelete(event) }] : []}
+    >
+      <article className={`mobileTimelineRow tone-${meta.tone}`}>
+        <span className="mobileTimelineTime">{formatTimelineTime(event.happenedAt)}</span>
+        <span className="mobileTimelineGlyph">
+          <Icon size={14} />
+        </span>
+        <div className="mobileTimelineCopy">
+          <div>
+            <strong>{event.title}</strong>
+            {event.amount ? (
+              <b>
+                {event.amount}
+                {event.unit || meta.unit}
+              </b>
+            ) : null}
+          </div>
+          {event.note ? <p>{event.note}</p> : null}
+        </div>
+        {event.photoUrl ? (
+          <button
+            className="photoOpenButton mobileTimelineThumbButton"
+            type="button"
+            onClick={() => onOpenPhoto?.({ url: event.photoUrl, title: event.title, takenAt: event.happenedAt })}
+          >
+            <img className="mobileTimelineThumb" src={event.photoUrl} alt={event.title} />
+          </button>
+        ) : null}
+        <MobileButton className="mobileDetailButton iconOnlyAction" size="mini" fill="none" onClick={() => onOpenDetail(event)} aria-label={`查看 ${event.title} 详情`}>
+          <ChevronRight size={14} />
+        </MobileButton>
+      </article>
+    </SwipeAction>
+  );
+}
+
+function MobileTimelineList({ events, onDelete, onOpenDetail, onOpenPhoto, emptyText }) {
   if (!events.length) {
-    return <p className="mutedText mobileEmptyText">这个日期还没有记录。点右下角新增一条。</p>;
+    return <p className="mutedText mobileEmptyText">{emptyText || "这个日期还没有记录。点右下角新增一条。"}</p>;
   }
 
   return (
     <div className="mobileTimelineList">
-      {events.map((event) => {
-        const Icon = eventIcons[event.type] || BookOpen;
-        const meta = EVENT_TYPES[event.type] || EVENT_TYPES.NOTE;
-        return (
-          <SwipeAction
-            key={event.id}
-            rightActions={onDelete ? [{ key: "delete", text: "删除", color: "danger", onClick: () => onDelete(event) }] : []}
-          >
-            <article className={`mobileTimelineRow tone-${meta.tone}`}>
-              <span className="mobileTimelineTime">{formatTimelineTime(event.happenedAt)}</span>
-              <span className="mobileTimelineGlyph">
-                <Icon size={14} />
-              </span>
-              <div className="mobileTimelineCopy">
-                <div>
-                  <strong>{event.title}</strong>
-                  {event.amount ? (
-                    <b>
-                      {event.amount}
-                      {event.unit || meta.unit}
-                    </b>
-                  ) : null}
-                </div>
-                {event.note ? <p>{event.note}</p> : null}
-              </div>
-              {event.photoUrl ? (
-                <button
-                  className="photoOpenButton mobileTimelineThumbButton"
-                  type="button"
-                  onClick={() => onOpenPhoto?.({ url: event.photoUrl, title: event.title, takenAt: event.happenedAt })}
-                >
-                  <img className="mobileTimelineThumb" src={event.photoUrl} alt={event.title} />
-                </button>
-              ) : null}
-              <MobileButton className="mobileDetailButton" size="mini" fill="none" onClick={() => onOpenDetail(event)}>
-                详情
-                <ChevronRight size={12} />
-              </MobileButton>
-            </article>
-          </SwipeAction>
-        );
-      })}
+      {events.map((event) => (
+        <MobileTimelineEntry
+          key={event.id}
+          event={event}
+          onDelete={onDelete}
+          onOpenDetail={onOpenDetail}
+          onOpenPhoto={onOpenPhoto}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MobileTimelineWeekList({ groups, onDelete, onOpenDetail, onOpenPhoto, emptyText }) {
+  const weekEvents = groups.reduce((sum, group) => sum + group.events.length, 0);
+
+  if (!weekEvents) {
+    return <p className="mutedText mobileEmptyText">{emptyText || "最近 7 天还没有记录。点右下角新增一条。"}</p>;
+  }
+
+  return (
+    <div className="mobileTimelineList weekMode">
+      {groups.map((group) => (
+        <section className="mobileWeekGroup" key={group.key}>
+          <div className="mobileWeekDivider">
+            <strong>{group.label}</strong>
+            <span>{group.subLabel}</span>
+          </div>
+          {group.events.length ? (
+            <div className="mobileWeekEntries">
+              {[...group.events].sort((a, b) => new Date(b.happenedAt) - new Date(a.happenedAt)).map((event) => (
+                <MobileTimelineEntry
+                  key={event.id}
+                  event={event}
+                  onDelete={onDelete}
+                  onOpenDetail={onOpenDetail}
+                  onOpenPhoto={onOpenPhoto}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="mutedText mobileWeekEmpty">这一天没有记录</p>
+          )}
+        </section>
+      ))}
     </div>
   );
 }
@@ -974,7 +1155,6 @@ function MobileTodayView({
   data,
   derived,
   shortcuts,
-  shortcutBusyId,
   onShortcutTrigger,
   onConfigureShortcuts,
   onCompleteReminder,
@@ -984,12 +1164,29 @@ function MobileTodayView({
   onEditEvent,
   onOpenPhoto
 }) {
-  const dateGroups = useMemo(() => buildTimelineDayGroups(derived.timelineEvents), [derived.timelineEvents]);
+  const dateGroups = useMemo(() => buildTimelineDayGroups(derived.journalEvents), [derived.journalEvents]);
+  const weekGroups = useMemo(() => buildRecentTimelineGroups(derived.journalEvents, 7), [derived.journalEvents]);
   const [selectedDateKey, setSelectedDateKey] = useState("");
   const [detailEvent, setDetailEvent] = useState(null);
-  const [timelineMode, setTimelineMode] = useState("list");
+  const [timelineScope, setTimelineScope] = useState("day");
+  const [timelineView, setTimelineView] = useState("calendar");
   const selectedGroup = dateGroups.find((group) => group.key === selectedDateKey) || dateGroups[0];
+  const weekFocusKey = weekGroups.some((group) => group.key === selectedDateKey) ? selectedDateKey : getTodayDateKey();
+  const weekEventCount = weekGroups.reduce((sum, group) => sum + group.events.length, 0);
   const compactReminders = getCompactReminderList(data.reminders);
+  const dayEvents = useMemo(
+    () => [...(selectedGroup?.events || [])].sort((a, b) => new Date(b.happenedAt) - new Date(a.happenedAt)),
+    [selectedGroup]
+  );
+  const timelineTitle =
+    timelineView === "list"
+      ? timelineScope === "day"
+        ? "单日事件条目"
+        : "一周事件条目"
+      : timelineScope === "day"
+        ? "单日日历"
+        : "周日历";
+  const timelineCount = timelineScope === "day" ? dayEvents.length : weekEventCount;
 
   useEffect(() => {
     if (!dateGroups.length) return;
@@ -1020,7 +1217,6 @@ function MobileTodayView({
 
       <ShortcutGrid
         shortcuts={shortcuts}
-        busyId={shortcutBusyId}
         onTrigger={onShortcutTrigger}
         onConfigure={onConfigureShortcuts}
       />
@@ -1040,45 +1236,87 @@ function MobileTodayView({
       <section className="mobileTimelineCard">
         <div className="mobileTimelineTools">
           <div>
-            <strong>{timelineMode === "list" ? "事件流" : "日分布"}</strong>
-            <span>{selectedGroup?.events.length || 0} 条</span>
+            <strong>{timelineTitle}</strong>
+            <span>{timelineCount} 条</span>
           </div>
-          <div className="mobileTimelineMode">
-            <button className={timelineMode === "list" ? "selected" : ""} type="button" onClick={() => setTimelineMode("list")}>
-              列表
-            </button>
-            <button className={timelineMode === "map" ? "selected" : ""} type="button" onClick={() => setTimelineMode("map")}>
-              分布
-            </button>
+          <div className="mobileTimelineControlStack">
+            <div className="mobileTimelineMode">
+              <button className={timelineScope === "day" ? "selected" : ""} type="button" onClick={() => setTimelineScope("day")}>
+                日
+              </button>
+              <button className={timelineScope === "week" ? "selected" : ""} type="button" onClick={() => setTimelineScope("week")}>
+                周
+              </button>
+            </div>
+            <div className="mobileTimelineMode">
+              <button className={timelineView === "list" ? "selected" : ""} type="button" onClick={() => setTimelineView("list")}>
+                条目
+              </button>
+              <button className={timelineView === "calendar" ? "selected" : ""} type="button" onClick={() => setTimelineView("calendar")}>
+                日历
+              </button>
+            </div>
           </div>
-          <CapsuleTabs
-            className="mobileDateTabs"
-            activeKey={selectedGroup?.key}
-            onChange={setSelectedDateKey}
-          >
-            {dateGroups.map((group) => (
-              <CapsuleTabs.Tab
-                key={group.key}
-                title={
-                  <span className="mobileDateTab">
-                    <strong>{group.label}</strong>
-                    <em>{group.subLabel}</em>
-                  </span>
-                }
-              />
-            ))}
-          </CapsuleTabs>
+          {timelineScope === "day" ? (
+            <CapsuleTabs
+              className="mobileDateTabs"
+              activeKey={selectedGroup?.key}
+              onChange={setSelectedDateKey}
+            >
+              {dateGroups.map((group) => (
+                <CapsuleTabs.Tab
+                  key={group.key}
+                  title={
+                    <span className="mobileDateTab">
+                      <strong>{group.label}</strong>
+                      <em>{group.subLabel}</em>
+                    </span>
+                  }
+                />
+              ))}
+            </CapsuleTabs>
+          ) : null}
         </div>
-        {timelineMode === "map" ? (
-          <DayDistributionTimeline events={selectedGroup?.events || []} onOpenDetail={setDetailEvent} />
-        ) : (
-          <MobileTimelineList
-            events={[...(selectedGroup?.events || [])].sort((a, b) => new Date(b.happenedAt) - new Date(a.happenedAt))}
+        {timelineScope === "week" && timelineView === "calendar" ? (
+          <DayDistributionTimeline
+            className="weekLayout"
+            groups={weekGroups}
+            focusKey={weekFocusKey}
+            limit={7}
+            includeEmptyGroups
+            onOpenDetail={setDetailEvent}
+            emptyText="最近 7 天还没有形成时间块。点右下角新增一条。"
+          />
+        ) : null}
+        {timelineScope === "week" && timelineView === "list" ? (
+          <MobileTimelineWeekList
+            groups={weekGroups}
             onDelete={onDeleteEvent}
             onOpenDetail={setDetailEvent}
             onOpenPhoto={onOpenPhoto}
+            emptyText="最近 7 天还没有记录。点右下角新增一条。"
           />
-        )}
+        ) : null}
+        {timelineScope === "day" && timelineView === "calendar" ? (
+          <DayDistributionTimeline
+            className="singleDayLayout"
+            groups={dateGroups}
+            focusKey={selectedGroup?.key || getTodayDateKey()}
+            limit={1}
+            showHeaders={false}
+            onOpenDetail={setDetailEvent}
+            emptyText="这个日期还没有记录。点右下角新增一条。"
+          />
+        ) : null}
+        {timelineScope === "day" && timelineView === "list" ? (
+          <MobileTimelineList
+            events={dayEvents}
+            onDelete={onDeleteEvent}
+            onOpenDetail={setDetailEvent}
+            onOpenPhoto={onOpenPhoto}
+            emptyText="这个日期还没有记录。点右下角新增一条。"
+          />
+        ) : null}
       </section>
       <MobileEventDetailPopup
         event={detailEvent}
@@ -1095,7 +1333,6 @@ function TodayView({
   data,
   derived,
   shortcuts,
-  shortcutBusyId,
   onShortcutTrigger,
   onConfigureShortcuts,
   onGenerateInsight,
@@ -1104,19 +1341,12 @@ function TodayView({
   onSkipReminder,
   onToggleReminder,
   onDeleteEvent,
+  onEditEvent,
   onOpenPhoto
 }) {
   const { pet, localCoach, insights } = data;
-  const [typeFilter, setTypeFilter] = useState("ALL");
   const [detailEvent, setDetailEvent] = useState(null);
   const latestInsight = insights[0];
-  const filteredEvents = useMemo(
-    () =>
-      typeFilter === "ALL"
-        ? derived.timelineEvents
-        : derived.timelineEvents.filter((event) => event.type === typeFilter),
-    [derived.timelineEvents, typeFilter]
-  );
 
   return (
     <>
@@ -1129,41 +1359,21 @@ function TodayView({
 
         <ShortcutGrid
           shortcuts={shortcuts}
-          busyId={shortcutBusyId}
           onTrigger={onShortcutTrigger}
           onConfigure={onConfigureShortcuts}
         />
 
-        <DesktopDayDistribution events={derived.timelineEvents} onOpenDetail={setDetailEvent} />
+        <DesktopDayDistribution events={derived.journalEvents} onOpenDetail={setDetailEvent} />
 
         <div className="timelineLayout">
           <section className="timelinePanel">
             <div className="timelineToolbar">
               <div>
                 <p>事件流</p>
-                <span>{filteredEvents.length} 条记录</span>
-              </div>
-              <div className="timelineFilterStrip" aria-label="时间轴筛选">
-                <button
-                  className={`filterChip ${typeFilter === "ALL" ? "selected" : ""}`}
-                  type="button"
-                  onClick={() => setTypeFilter("ALL")}
-                >
-                  全部
-                </button>
-                {Object.entries(EVENT_TYPES).map(([key, value]) => (
-                  <button
-                    className={`filterChip ${typeFilter === key ? "selected" : ""}`}
-                    type="button"
-                    key={key}
-                    onClick={() => setTypeFilter(key)}
-                  >
-                    {value.label}
-                  </button>
-                ))}
+                <span>{derived.journalEvents.length} 条记录</span>
               </div>
             </div>
-            <TimelineStream events={filteredEvents} onDelete={onDeleteEvent} onOpenDetail={setDetailEvent} onOpenPhoto={onOpenPhoto} />
+            <TimelineStream events={derived.journalEvents} onDelete={onDeleteEvent} onOpenDetail={setDetailEvent} onOpenPhoto={onOpenPhoto} />
           </section>
 
           <aside className="timelineAside">
@@ -1188,21 +1398,20 @@ function TodayView({
         data={data}
         derived={derived}
         shortcuts={shortcuts}
-        shortcutBusyId={shortcutBusyId}
         onShortcutTrigger={onShortcutTrigger}
         onConfigureShortcuts={onConfigureShortcuts}
         onCompleteReminder={onCompleteReminder}
         onSkipReminder={onSkipReminder}
         onToggleReminder={onToggleReminder}
         onDeleteEvent={onDeleteEvent}
-        onEditEvent={onEditTimeline}
+        onEditEvent={onEditEvent}
         onOpenPhoto={onOpenPhoto}
       />
       <MobileEventDetailPopup
         event={detailEvent}
         onClose={() => setDetailEvent(null)}
         onDelete={onDeleteEvent}
-        onEdit={onEditTimeline}
+        onEdit={onEditEvent}
         onOpenPhoto={onOpenPhoto}
       />
     </>
@@ -1344,11 +1553,41 @@ function ExpenseForm({ petId, editingExpense, onCreate, onUpdate, onCancelEdit }
   );
 }
 
+function SubpageTop({ title, subtitle, onBack }) {
+  return (
+    <div className="subpageTop">
+      <button className="backButton" type="button" onClick={onBack}>
+        返回
+      </button>
+      <div>
+        <strong>{title}</strong>
+        {subtitle ? <span>{subtitle}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function SectionMenuCard({ icon: Icon, title, subtitle, meta, onClick }) {
+  return (
+    <button className="sectionMenuCard" type="button" onClick={onClick}>
+      <span className="sectionMenuIcon">{Icon ? <Icon size={18} /> : null}</span>
+      <div>
+        <strong>{title}</strong>
+        <small>{subtitle}</small>
+      </div>
+      {meta ? <em>{meta}</em> : null}
+      <ChevronRight size={16} />
+    </button>
+  );
+}
+
 function InsightsView({ data, derived, onCreateExpense, onUpdateExpense, onDeleteExpense, onUpdateWeight, onDeleteWeight }) {
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [editingWeightId, setEditingWeightId] = useState(null);
+  const [section, setSection] = useState("home");
   const editingExpense = data.expenses.find((expense) => expense.id === editingExpenseId) || null;
   const editingWeight = derived.weightRecords.find((weight) => weight.id === editingWeightId) || null;
+  const latestInsight = data.insights[0];
 
   async function saveWeight(payload) {
     await onUpdateWeight(payload);
@@ -1361,25 +1600,62 @@ function InsightsView({ data, derived, onCreateExpense, onUpdateExpense, onDelet
   }
 
   return (
-    <section className="singleColumn">
-      <div className="pageHeader">
-        <div>
-          <h2>成长洞察</h2>
-          <p>用图表检查体重趋势、费用结构和 AI 建议，帮助你发现日常节奏。</p>
-        </div>
-      </div>
-      <div className="chartGrid">
-        <WeightChart weightRecords={derived.weightRecords} />
-        <ExpenseChart expenses={data.expenses} />
-      </div>
-      <WeightLedger
-        weightRecords={derived.weightRecords}
-        editingWeight={editingWeight}
-        onEdit={(weight) => setEditingWeightId(weight.id)}
-        onSave={saveWeight}
-        onCancel={() => setEditingWeightId(null)}
-        onDelete={onDeleteWeight}
-      />
+    <section className="singleColumn insightWorkspace">
+      {section === "home" ? (
+        <>
+          <div className="pageHeader">
+            <div>
+              <h2>成长洞察</h2>
+              <p>先看趋势，再进入体重、费用或 AI 建议的具体页面。</p>
+            </div>
+          </div>
+          <div className="sectionMenuGrid">
+            <SectionMenuCard
+              icon={LineChart}
+              title="体重记录"
+              subtitle="查看趋势并修改已有条目"
+              meta={derived.latestWeight ? `${derived.latestWeight.weightKg}kg` : "未记录"}
+              onClick={() => setSection("weight")}
+            />
+            <SectionMenuCard
+              icon={CircleDollarSign}
+              title="费用记录"
+              subtitle="新增、编辑和删除消费"
+              meta={formatCurrency(derived.expenseSummary.totalCents)}
+              onClick={() => setSection("expense")}
+            />
+            <SectionMenuCard
+              icon={Sparkles}
+              title="AI 建议"
+              subtitle={latestInsight ? latestInsight.title : "暂无建议历史"}
+              meta={`${data.insights.length} 条`}
+              onClick={() => setSection("ai")}
+            />
+          </div>
+          <div className="chartGrid">
+            <WeightChart weightRecords={derived.weightRecords} />
+            <ExpenseChart expenses={data.expenses} />
+          </div>
+        </>
+      ) : null}
+
+      {section === "weight" ? (
+        <>
+        <SubpageTop title="体重记录" subtitle="编辑或删除既有体重条目" onBack={() => setSection("home")} />
+        <WeightLedger
+          weightRecords={derived.weightRecords}
+          editingWeight={editingWeight}
+          onEdit={(weight) => setEditingWeightId(weight.id)}
+          onSave={saveWeight}
+          onCancel={() => setEditingWeightId(null)}
+          onDelete={onDeleteWeight}
+        />
+        </>
+      ) : null}
+
+      {section === "expense" ? (
+      <>
+      <SubpageTop title="费用记录" subtitle={`${formatCurrency(derived.expenseSummary.totalCents)} 累计`} onBack={() => setSection("home")} />
       <section className="contentPanel">
         <div className="sectionHeading">
           <p>费用记录</p>
@@ -1418,6 +1694,12 @@ function InsightsView({ data, derived, onCreateExpense, onUpdateExpense, onDelet
           ))}
         </div>
       </section>
+      </>
+      ) : null}
+
+      {section === "ai" ? (
+      <>
+      <SubpageTop title="AI 建议" subtitle="保守、可执行、可追踪" onBack={() => setSection("home")} />
       <section className="contentPanel">
         <div className="sectionHeading">
           <p>AI 建议历史</p>
@@ -1433,6 +1715,8 @@ function InsightsView({ data, derived, onCreateExpense, onUpdateExpense, onDelet
           ))}
         </div>
       </section>
+      </>
+      ) : null}
     </section>
   );
 }
@@ -1471,61 +1755,124 @@ function ReminderForm({ petId, onCreate }) {
   );
 }
 
-function ShortcutSettings({ shortcuts, onChange, onReset }) {
-  function updateShortcut(id, key, value) {
-    onChange(shortcuts.map((item) => (item.id === id ? { ...item, [key]: value } : item)));
+function EventPresetSettings({ presets, onChange, onReset }) {
+  const [draftLabel, setDraftLabel] = useState("");
+
+  function updatePreset(id, patch) {
+    onChange(presets.map((item) => {
+      if (item.id !== id) return item;
+      const next = { ...item, ...patch };
+      if (patch.label !== undefined) {
+        next.label = sanitizeShortcutLabel(patch.label, item.label || "事件");
+      }
+      return next;
+    }));
+  }
+
+  function addPreset() {
+    const label = draftLabel.trim();
+    if (!label) return;
+    onChange([
+      ...presets,
+      {
+        id: createEventPresetId(),
+        enabled: false,
+        label: sanitizeShortcutLabel(label),
+        note: "",
+        mode: "point"
+      }
+    ]);
+    setDraftLabel("");
+  }
+
+  function deletePreset(preset) {
+    const ok = window.confirm(`删除事件「${preset.label || "未命名"}」吗？`);
+    if (!ok) return;
+    onChange(presets.filter((item) => item.id !== preset.id));
   }
 
   return (
-    <div className="shortcutSettingsList">
-      {shortcuts.map((shortcut, index) => {
-        const meta = EVENT_TYPES[shortcut.type] || EVENT_TYPES.NOTE;
-        return (
-          <article className="shortcutSettingItem" key={shortcut.id}>
-            <label className="shortcutToggle">
+    <div className="eventPresetSettings">
+      <div className="eventPresetComposer">
+        <input
+          value={draftLabel}
+          onChange={(event) => setDraftLabel(event.target.value)}
+          placeholder="新增事件，比如 晚餐"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              addPreset();
+            }
+          }}
+        />
+        <button className="secondaryButton" type="button" onClick={addPreset}>
+          <Plus size={16} />
+          添加
+        </button>
+      </div>
+
+      <div className="eventPresetList">
+        <div className="eventPresetHeader" aria-hidden="true">
+          <span>快捷</span>
+          <span>事件名称</span>
+          <span>单点 / 时段</span>
+          <span>备注</span>
+          <span />
+        </div>
+        {presets.map((preset) => {
+          const mode = preset.mode === "range" ? "range" : "point";
+          return (
+            <article className={`eventPresetRow ${preset.enabled ? "quick" : ""}`} key={preset.id}>
+              <label className="eventPresetQuick" title="是否显示到首页快捷事件">
+                <input
+                  type="checkbox"
+                  checked={Boolean(preset.enabled)}
+                  onChange={(event) => updatePreset(preset.id, { enabled: event.target.checked })}
+                />
+                <span>快捷</span>
+              </label>
               <input
-                type="checkbox"
-                checked={shortcut.enabled}
-                onChange={(event) => updateShortcut(shortcut.id, "enabled", event.target.checked)}
+                className="eventPresetName"
+                value={preset.label}
+                onChange={(event) => updatePreset(preset.id, { label: event.target.value })}
+                placeholder="事件名"
               />
-              <span>{index + 1}</span>
-            </label>
-            <input
-              className="shortcutNameInput"
-              value={shortcut.label}
-              onChange={(event) => updateShortcut(shortcut.id, "label", event.target.value)}
-              placeholder="按钮名"
-            />
-            <select className="shortcutTypeSelect" value={shortcut.type} onChange={(event) => updateShortcut(shortcut.id, "type", event.target.value)}>
-              {Object.entries(EVENT_TYPES).map(([key, value]) => (
-                <option key={key} value={key}>{value.label}</option>
-              ))}
-            </select>
-            <input
-              className="shortcutTitleInput"
-              value={shortcut.title}
-              onChange={(event) => updateShortcut(shortcut.id, "title", event.target.value)}
-              placeholder="记录标题"
-            />
-            <input
-              className="shortcutAmountInput"
-              value={shortcut.amount}
-              onChange={(event) => updateShortcut(shortcut.id, "amount", event.target.value)}
-              placeholder={meta.unit ? `数值 ${meta.unit}` : "数值"}
-              inputMode="decimal"
-            />
-            <input
-              className="shortcutNoteInput"
-              value={shortcut.note}
-              onChange={(event) => updateShortcut(shortcut.id, "note", event.target.value)}
-              placeholder="备注"
-            />
-          </article>
-        );
-      })}
-      <button className="secondaryButton" type="button" onClick={onReset}>
-        恢复默认快捷事件
-      </button>
+              <div className="shortcutModeSwitch eventPresetMode" aria-label={`${preset.label || "事件"} 时间类型`}>
+                <button
+                  className={mode === "point" ? "selected" : ""}
+                  type="button"
+                  onClick={() => updatePreset(preset.id, { mode: "point" })}
+                >
+                  单点
+                </button>
+                <button
+                  className={mode === "range" ? "selected" : ""}
+                  type="button"
+                  onClick={() => updatePreset(preset.id, { mode: "range" })}
+                >
+                  时段
+                </button>
+              </div>
+              <input
+                className="eventPresetNote"
+                value={preset.note}
+                onChange={(event) => updatePreset(preset.id, { note: event.target.value.slice(0, 80) })}
+                placeholder="备注"
+              />
+              <button className="miniDangerButton iconOnlyAction" type="button" onClick={() => deletePreset(preset)} aria-label={`删除事件 ${preset.label || ""}`}>
+                <Trash2 size={15} />
+              </button>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="eventPresetFooter">
+        <span>勾选“快捷”的事件会出现在时间轴首页；点快捷后会打开预填好的新增表单。</span>
+        <button className="secondaryButton" type="button" onClick={onReset}>
+          恢复默认
+        </button>
+      </div>
     </div>
   );
 }
@@ -1568,7 +1915,7 @@ function ProfileForm({ pet, onSave }) {
       await onSave({ id: pet.id, ...form });
       if (form.avatarUrl) {
         window.localStorage.setItem(APP_ICON_STORAGE_KEY, form.avatarUrl);
-        updateAppIconLinks(form.avatarUrl);
+        updateAppIconLinks(`/api/app-icon?size=192&v=${Date.now()}`);
       }
     } finally {
       setSaving(false);
@@ -1591,7 +1938,7 @@ function ProfileForm({ pet, onSave }) {
         <img src={form.avatarUrl || "/icons/petdaily-icon-192.png"} alt={`${form.name || pet.name} 桌面图标预览`} />
         <div>
           <strong>桌面快捷图标</strong>
-          <span>保存后会同步宠物头像和本机快捷图标预览；已添加到主屏幕的图标可能需要重新添加一次。</span>
+          <span>保存后会更新当前浏览器图标和“添加到主屏幕”使用的图标；已经固定到桌面的旧图标通常需要删除后重新添加。</span>
           <button className="secondaryButton" type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarProcessing}>
             <Camera size={16} />
             {avatarProcessing ? "处理中" : "选择宠物图"}
@@ -1648,28 +1995,62 @@ function ProfileView({
   onToggleReminder,
   onDeleteReminder
 }) {
+  const [section, setSection] = useState("home");
+  const quickCount = shortcuts.filter((item) => item.enabled).length;
+  const activeReminderCount = data.reminders.filter((item) => item.active).length;
+
   return (
-    <section className="singleColumn">
+    <section className="singleColumn settingsWorkspace">
+      {section === "home" ? (
+        <>
       <div className="pageHeader">
         <div>
           <h2>我的宠物</h2>
-          <p>维护基础档案、快捷事件和提醒计划。</p>
+          <p>把设置拆成短页面，避免在手机上一路翻到底。</p>
         </div>
       </div>
+      <div className="sectionMenuGrid">
+        <SectionMenuCard
+          icon={BookOpen}
+          title="事件设置"
+          subtitle="维护事件清单，并选择首页快捷入口"
+          meta={`${shortcuts.length} 条 / ${quickCount} 快捷`}
+          onClick={() => setSection("events")}
+        />
+        <SectionMenuCard
+          icon={Bell}
+          title="提醒计划"
+          subtitle="新增、完成、暂停或删除提醒"
+          meta={`${activeReminderCount} 启用`}
+          onClick={() => setSection("reminders")}
+        />
+        <SectionMenuCard
+          icon={Settings}
+          title="档案与桌面图标"
+          subtitle={data.pet.avatarUrl ? "已设置宠物图" : "使用默认图标"}
+          meta={data.pet.name}
+          onClick={() => setSection("profile")}
+        />
+      </div>
+      </>
+      ) : null}
+
+      {section === "events" ? (
+      <>
+      <SubpageTop title="事件设置" subtitle="每一行就是一个可记录事件" onBack={() => setSection("home")} />
       <section className="contentPanel settingsSection">
         <div className="sectionHeading">
-          <p>宠物档案</p>
-          <span>第一版支持一只宠物</span>
+          <p>事件设置</p>
+          <span>只保留快捷、名称、记录方式和备注</span>
         </div>
-        <ProfileForm pet={data.pet} onSave={onSaveProfile} />
+        <EventPresetSettings presets={shortcuts} onChange={onShortcutsChange} onReset={onResetShortcuts} />
       </section>
-      <section className="contentPanel">
-        <div className="sectionHeading">
-          <p>快捷事件</p>
-          <span>首页按钮和数字键会同步更新</span>
-        </div>
-        <ShortcutSettings shortcuts={shortcuts} onChange={onShortcutsChange} onReset={onResetShortcuts} />
-      </section>
+      </>
+      ) : null}
+
+      {section === "reminders" ? (
+      <>
+      <SubpageTop title="提醒计划" subtitle="常用提醒独立管理" onBack={() => setSection("home")} />
       <section className="contentPanel settingsSection">
         <div className="sectionHeading">
           <p>提醒计划</p>
@@ -1684,12 +2065,27 @@ function ProfileView({
           onDelete={onDeleteReminder}
         />
       </section>
-      <section className="syncPanel">
-        <div>
-          <strong>Cloudflare 同步预留</strong>
-          <p>结构化数据将迁移到 D1，照片迁移到 R2，前端可部署到 Pages；当前本地 SQLite 保持同一业务模型。</p>
-        </div>
-      </section>
+      </>
+      ) : null}
+
+      {section === "profile" ? (
+        <>
+          <SubpageTop title="档案与桌面图标" subtitle="换宠物图后重新添加主屏幕即可使用新图标" onBack={() => setSection("home")} />
+          <section className="contentPanel settingsSection">
+            <div className="sectionHeading">
+              <p>宠物档案</p>
+              <span>第一版支持一只宠物</span>
+            </div>
+            <ProfileForm pet={data.pet} onSave={onSaveProfile} />
+          </section>
+          <section className="syncPanel">
+            <div>
+              <strong>Cloudflare 同步预留</strong>
+              <p>结构化数据将迁移到 D1，照片迁移到 R2，前端可部署到 Pages；当前本地 SQLite 保持同一业务模型。</p>
+            </div>
+          </section>
+        </>
+      ) : null}
     </section>
   );
 }
@@ -1698,9 +2094,9 @@ export default function PetDailyApp({ initialData }) {
   const [activeTab, setActiveTab] = useState("today");
   const [data, setData] = useState(initialData);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetPresetId, setSheetPresetId] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [shortcutBusyId, setShortcutBusyId] = useState(null);
   const [shortcutsLoaded, setShortcutsLoaded] = useState(false);
   const [eventShortcuts, setEventShortcuts] = useState(defaultEventShortcuts);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -1710,8 +2106,15 @@ export default function PetDailyApp({ initialData }) {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(SHORTCUT_STORAGE_KEY);
+      const legacy = window.localStorage.getItem(LEGACY_SHORTCUT_STORAGE_KEY);
       if (stored) {
         setEventShortcuts(normalizeShortcuts(JSON.parse(stored)));
+      } else if (legacy) {
+        const normalized = normalizeShortcuts(JSON.parse(legacy));
+        setEventShortcuts(normalized);
+        window.localStorage.setItem(SHORTCUT_STORAGE_KEY, JSON.stringify(normalized));
+      } else {
+        setEventShortcuts(defaultEventShortcuts);
       }
     } catch {
       setEventShortcuts(defaultEventShortcuts);
@@ -1747,15 +2150,15 @@ export default function PetDailyApp({ initialData }) {
 
       const keyNumber = Number(event.key);
       if (!Number.isInteger(keyNumber) || keyNumber < 1 || keyNumber > 9) return;
-      const shortcut = eventShortcuts.filter((item) => item.enabled)[keyNumber - 1];
-      if (!shortcut || shortcutBusyId) return;
+      const shortcut = eventShortcuts.filter((item) => item.enabled && item.label?.trim())[keyNumber - 1];
+      if (!shortcut) return;
       event.preventDefault();
-      createShortcutTimeline(shortcut);
+      openQuickRecord(shortcut.id);
     }
 
     window.addEventListener("keydown", handleShortcutKey);
     return () => window.removeEventListener("keydown", handleShortcutKey);
-  });
+  }, [data.pet, eventShortcuts]);
 
   useEffect(() => {
     const visualViewport = window.visualViewport;
@@ -1848,21 +2251,9 @@ export default function PetDailyApp({ initialData }) {
     }));
   }
 
-  async function createShortcutTimeline(shortcut) {
-    if (!data.pet) return;
-    const payload = shortcutToTimelinePayload(shortcut, data.pet.id);
-    if (payload.type === "WEIGHT" && !payload.amount) {
-      const input = window.prompt("输入本次体重 kg");
-      if (!input) return;
-      payload.amount = input;
-    }
-
-    setShortcutBusyId(shortcut.id);
-    try {
-      await createTimeline(payload);
-    } finally {
-      setShortcutBusyId(null);
-    }
+  function openQuickRecord(presetId = null) {
+    setSheetPresetId(presetId);
+    setSheetOpen(true);
   }
 
   async function deleteTimeline(event) {
@@ -2128,8 +2519,7 @@ export default function PetDailyApp({ initialData }) {
             data={data}
             derived={derived}
             shortcuts={eventShortcuts}
-            shortcutBusyId={shortcutBusyId}
-            onShortcutTrigger={createShortcutTimeline}
+            onShortcutTrigger={(shortcut) => openQuickRecord(shortcut.id)}
             onConfigureShortcuts={() => setActiveTab("profile")}
             onGenerateInsight={generateInsight}
             aiLoading={aiLoading}
@@ -2137,6 +2527,7 @@ export default function PetDailyApp({ initialData }) {
             onSkipReminder={skipReminder}
             onToggleReminder={toggleReminder}
             onDeleteEvent={deleteTimeline}
+            onEditEvent={onEditTimeline}
             onOpenPhoto={setLightboxPhoto}
           />
         ) : null}
@@ -2158,7 +2549,7 @@ export default function PetDailyApp({ initialData }) {
           <ProfileView
             data={data}
             shortcuts={eventShortcuts}
-            onShortcutsChange={(nextShortcuts) => setEventShortcuts(normalizeShortcuts(nextShortcuts))}
+            onShortcutsChange={setEventShortcuts}
             onResetShortcuts={() => setEventShortcuts(defaultEventShortcuts)}
             onSaveProfile={saveProfile}
             onCreateReminder={createReminder}
@@ -2170,14 +2561,14 @@ export default function PetDailyApp({ initialData }) {
         ) : null}
       </main>
 
-      <button className="floatingAddButton desktopAddButton" type="button" onClick={() => setSheetOpen(true)} aria-label="新增事件">
+      <button className="floatingAddButton desktopAddButton" type="button" onClick={() => openQuickRecord()} aria-label="新增事件">
         <Plus size={24} />
       </button>
 
       <FloatingBubble
         className="mobileAddBubble"
         axis="lock"
-        onClick={() => setSheetOpen(true)}
+        onClick={() => openQuickRecord()}
         style={{
           "--initial-position-right": "12px",
           "--initial-position-bottom": "78px",
@@ -2207,7 +2598,12 @@ export default function PetDailyApp({ initialData }) {
       <QuickRecordSheet
         open={sheetOpen}
         petId={data.pet.id}
-        onClose={() => setSheetOpen(false)}
+        eventPresets={eventShortcuts}
+        selectedPresetId={sheetPresetId}
+        onClose={() => {
+          setSheetOpen(false);
+          setSheetPresetId(null);
+        }}
         onCreate={createTimeline}
       />
       <PhotoLightbox photo={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />

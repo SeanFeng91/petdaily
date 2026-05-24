@@ -1,0 +1,47 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - generic [ref=e192]:
+        - generic [ref=e194]:
+          - heading "我的宠物" [level=2] [ref=e195]
+          - paragraph [ref=e196]: 把设置拆成短页面，避免在手机上一路翻到底。
+        - generic [ref=e197]:
+          - button "事件设置 维护事件清单，并选择首页快捷入口 9 条 / 5 快捷" [ref=e198] [cursor=pointer]:
+            - img [ref=e200]
+            - generic [ref=e202]:
+              - strong [ref=e203]: 事件设置
+              - generic [ref=e204]: 维护事件清单，并选择首页快捷入口
+            - emphasis [ref=e205]: 9 条 / 5 快捷
+            - img [ref=e206]
+          - button "提醒计划 新增、完成、暂停或删除提醒 5 启用" [ref=e208] [cursor=pointer]:
+            - img [ref=e210]
+            - generic [ref=e213]:
+              - strong [ref=e214]: 提醒计划
+              - generic [ref=e215]: 新增、完成、暂停或删除提醒
+            - emphasis [ref=e216]: 5 启用
+            - img [ref=e217]
+          - button "档案与桌面图标 已设置宠物图 豆包" [ref=e219] [cursor=pointer]:
+            - img [ref=e221]
+            - generic [ref=e224]:
+              - strong [ref=e225]: 档案与桌面图标
+              - generic [ref=e226]: 已设置宠物图
+            - emphasis [ref=e227]: 豆包
+            - img [ref=e228]
+    - img [ref=e151] [cursor=pointer]
+    - navigation "主导航" [ref=e152]:
+      - generic [ref=e154]:
+        - generic [ref=e155] [cursor=pointer]:
+          - img [ref=e158]
+          - generic [ref=e161]: 时间轴
+        - generic [ref=e162] [cursor=pointer]:
+          - img [ref=e165]
+          - generic [ref=e167]: 监听
+        - generic [ref=e168] [cursor=pointer]:
+          - img [ref=e171]
+          - generic [ref=e174]: 洞察
+        - generic [ref=e175] [cursor=pointer]:
+          - img [ref=e178]
+          - generic [ref=e181]: 我的
+  - button "Open Next.js Dev Tools" [ref=e187] [cursor=pointer]:
+    - img [ref=e188]
+  - alert [ref=e191]

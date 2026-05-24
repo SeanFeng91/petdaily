@@ -1,0 +1,189 @@
+- generic [ref=e2]:
+  - main [ref=e3]:
+    - region "手机端今日工作台" [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - text: PetDaily
+          - strong [ref=e7]: 豆包
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - term [ref=e10]: 今日
+            - definition [ref=e11]: "2"
+          - generic [ref=e12]:
+            - term [ref=e13]: 体重
+            - definition [ref=e14]: 3.2kg
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - paragraph [ref=e18]: 快捷事件
+          - button "配置快捷事件" [ref=e19] [cursor=pointer]:
+            - img [ref=e20]
+        - generic [ref=e23]:
+          - button "早餐" [ref=e24] [cursor=pointer]:
+            - strong [ref=e25]: 早餐
+          - button "晚餐" [ref=e26] [cursor=pointer]:
+            - strong [ref=e27]: 晚餐
+          - button "尿尿" [ref=e28] [cursor=pointer]:
+            - strong [ref=e29]: 尿尿
+          - button "便便" [ref=e30] [cursor=pointer]:
+            - strong [ref=e31]: 便便
+          - button "训练" [ref=e32] [cursor=pointer]:
+            - strong [ref=e33]: 训练
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - strong [ref=e36]: 提醒
+          - generic [ref=e37]: 优先显示到点事项
+        - generic [ref=e38]:
+          - article [ref=e39]:
+            - generic [ref=e40]:
+              - strong [ref=e41]: 08:05
+              - text: 外出如厕
+            - paragraph [ref=e42]: 早餐后外出如厕
+            - generic [ref=e43]: 已到点
+            - generic [ref=e44]:
+              - button "完成提醒" [ref=e45] [cursor=pointer]:
+                - img [ref=e46]
+              - button "跳过提醒" [ref=e48] [cursor=pointer]:
+                - img [ref=e49]
+              - button "暂停提醒" [ref=e51] [cursor=pointer]:
+                - img [ref=e52]
+          - article [ref=e54]:
+            - generic [ref=e55]:
+              - strong [ref=e56]: 09:00
+              - text: 驱虫
+            - paragraph [ref=e57]: 下一次体内外驱虫
+            - generic [ref=e58]: 已到点
+            - generic [ref=e59]:
+              - button "完成提醒" [ref=e60] [cursor=pointer]:
+                - img [ref=e61]
+              - button "跳过提醒" [ref=e63] [cursor=pointer]:
+                - img [ref=e64]
+              - button "暂停提醒" [ref=e66] [cursor=pointer]:
+                - img [ref=e67]
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - strong [ref=e72]: 单日时间块
+            - generic [ref=e73]: 2 条
+          - generic [ref=e74]:
+            - button "日" [ref=e75] [cursor=pointer]
+            - button "周" [ref=e76] [cursor=pointer]
+          - generic [ref=e79]:
+            - generic [ref=e82] [cursor=pointer]:
+              - strong [ref=e83]: 今天
+              - emphasis [ref=e84]: 周日
+            - generic [ref=e87] [cursor=pointer]:
+              - strong [ref=e88]: 05/05
+              - emphasis [ref=e89]: 周二
+            - generic [ref=e92] [cursor=pointer]:
+              - strong [ref=e93]: 05/04
+              - emphasis [ref=e94]: 周一
+            - generic [ref=e97] [cursor=pointer]:
+              - strong [ref=e98]: 05/03
+              - emphasis [ref=e99]: 周日
+            - generic [ref=e102] [cursor=pointer]:
+              - strong [ref=e103]: 05/02
+              - emphasis [ref=e104]: 周六
+            - generic [ref=e107] [cursor=pointer]:
+              - strong [ref=e108]: 05/01
+              - emphasis [ref=e109]: 周五
+        - generic "多日纵向时间分布" [ref=e110]:
+          - generic [ref=e111]:
+            - generic [ref=e112]: 持续时段
+            - generic [ref=e114]: 单点事件
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - generic [ref=e119]:
+                - generic [ref=e120]: AM
+                - strong [ref=e121]: "12"
+              - generic [ref=e122]:
+                - generic [ref=e123]: AM
+                - strong [ref=e124]: "01"
+              - generic [ref=e125]:
+                - generic [ref=e126]: AM
+                - strong [ref=e127]: "02"
+              - generic [ref=e128]:
+                - generic [ref=e129]: AM
+                - strong [ref=e130]: "03"
+              - generic [ref=e131]:
+                - generic [ref=e132]: AM
+                - strong [ref=e133]: "04"
+              - generic [ref=e134]:
+                - generic [ref=e135]: AM
+                - strong [ref=e136]: "05"
+              - generic [ref=e137]:
+                - generic [ref=e138]: AM
+                - strong [ref=e139]: "06"
+              - generic [ref=e140]:
+                - generic [ref=e141]: AM
+                - strong [ref=e142]: "07"
+              - generic [ref=e143]:
+                - generic [ref=e144]: AM
+                - strong [ref=e145]: "08"
+              - generic [ref=e146]:
+                - generic [ref=e147]: AM
+                - strong [ref=e148]: "09"
+              - generic [ref=e149]:
+                - generic [ref=e150]: AM
+                - strong [ref=e151]: "10"
+              - generic [ref=e152]:
+                - generic [ref=e153]: AM
+                - strong [ref=e154]: "11"
+              - generic [ref=e155]:
+                - generic [ref=e156]: PM
+                - strong [ref=e157]: "12"
+              - generic [ref=e158]:
+                - generic [ref=e159]: PM
+                - strong [ref=e160]: "01"
+              - generic [ref=e161]:
+                - generic [ref=e162]: PM
+                - strong [ref=e163]: "02"
+              - generic [ref=e164]:
+                - generic [ref=e165]: PM
+                - strong [ref=e166]: "03"
+              - generic [ref=e167]:
+                - generic [ref=e168]: PM
+                - strong [ref=e169]: "04"
+              - generic [ref=e170]:
+                - generic [ref=e171]: PM
+                - strong [ref=e172]: "05"
+              - generic [ref=e173]:
+                - generic [ref=e174]: PM
+                - strong [ref=e175]: "06"
+              - generic [ref=e176]:
+                - generic [ref=e177]: PM
+                - strong [ref=e178]: "07"
+              - generic [ref=e179]:
+                - generic [ref=e180]: PM
+                - strong [ref=e181]: "08"
+              - generic [ref=e182]:
+                - generic [ref=e183]: PM
+                - strong [ref=e184]: "09"
+              - generic [ref=e185]:
+                - generic [ref=e186]: PM
+                - strong [ref=e187]: "10"
+              - generic [ref=e188]:
+                - generic [ref=e189]: PM
+                - strong [ref=e190]: "11"
+            - generic:
+              - generic:
+                - generic: 现在 23:06
+            - generic [ref=e191]:
+              - button "今天 08:00 上午睡觉" [ref=e216] [cursor=pointer]:
+                - generic: 上午睡觉
+              - button "今天 16:46 早餐完成" [ref=e217] [cursor=pointer]:
+                - generic: 早餐完成
+  - img [ref=e219] [cursor=pointer]
+  - navigation "主导航" [ref=e220]:
+    - generic [ref=e222]:
+      - generic [ref=e223] [cursor=pointer]:
+        - img [ref=e226]
+        - generic [ref=e229]: 时间轴
+      - generic [ref=e230] [cursor=pointer]:
+        - img [ref=e233]
+        - generic [ref=e235]: 监听
+      - generic [ref=e236] [cursor=pointer]:
+        - img [ref=e239]
+        - generic [ref=e242]: 洞察
+      - generic [ref=e243] [cursor=pointer]:
+        - img [ref=e246]
+        - generic [ref=e249]: 我的

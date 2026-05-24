@@ -1,0 +1,145 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - generic [ref=e192]:
+        - generic [ref=e230]:
+          - button "返回" [ref=e231] [cursor=pointer]
+          - generic [ref=e232]:
+            - strong [ref=e233]: 事件设置
+            - generic [ref=e234]: 每一行就是一个可记录事件
+        - generic [ref=e235]:
+          - generic [ref=e236]:
+            - paragraph [ref=e237]: 事件设置
+            - generic [ref=e238]: 只保留快捷、名称、记录方式和备注
+          - generic [ref=e239]:
+            - generic [ref=e240]:
+              - textbox "新增事件，比如 晚餐" [ref=e241]
+              - button "添加" [ref=e242] [cursor=pointer]:
+                - img [ref=e243]
+                - text: 添加
+            - generic [ref=e244]:
+              - generic [ref=e245]:
+                - generic [ref=e246]: 快捷
+                - generic [ref=e247]: 事件名称
+                - generic [ref=e248]: 单点 / 时段
+                - generic [ref=e249]: 备注
+              - article [ref=e251]:
+                - generic "是否显示到首页快捷事件" [ref=e252]:
+                  - checkbox "快捷" [checked] [ref=e253]
+                  - generic [ref=e254]: 快捷
+                - textbox "事件名" [ref=e255]: 早餐
+                - generic "早餐 时间类型" [ref=e256]:
+                  - button "单点" [ref=e257] [cursor=pointer]
+                  - button "时段" [ref=e258] [cursor=pointer]
+                - textbox "备注" [ref=e259]
+                - button "删除事件 早餐" [ref=e260] [cursor=pointer]:
+                  - img [ref=e261]
+              - article [ref=e264]:
+                - generic "是否显示到首页快捷事件" [ref=e265]:
+                  - checkbox "快捷" [checked] [ref=e266]
+                  - generic [ref=e267]: 快捷
+                - textbox "事件名" [ref=e268]: 晚餐
+                - generic "晚餐 时间类型" [ref=e269]:
+                  - button "单点" [ref=e270] [cursor=pointer]
+                  - button "时段" [ref=e271] [cursor=pointer]
+                - textbox "备注" [ref=e272]
+                - button "删除事件 晚餐" [ref=e273] [cursor=pointer]:
+                  - img [ref=e274]
+              - article [ref=e277]:
+                - generic "是否显示到首页快捷事件" [ref=e278]:
+                  - checkbox "快捷" [checked] [ref=e279]
+                  - generic [ref=e280]: 快捷
+                - textbox "事件名" [ref=e281]: 尿尿
+                - generic "尿尿 时间类型" [ref=e282]:
+                  - button "单点" [ref=e283] [cursor=pointer]
+                  - button "时段" [ref=e284] [cursor=pointer]
+                - textbox "备注" [ref=e285]
+                - button "删除事件 尿尿" [ref=e286] [cursor=pointer]:
+                  - img [ref=e287]
+              - article [ref=e290]:
+                - generic "是否显示到首页快捷事件" [ref=e291]:
+                  - checkbox "快捷" [checked] [ref=e292]
+                  - generic [ref=e293]: 快捷
+                - textbox "事件名" [ref=e294]: 便便
+                - generic "便便 时间类型" [ref=e295]:
+                  - button "单点" [ref=e296] [cursor=pointer]
+                  - button "时段" [ref=e297] [cursor=pointer]
+                - textbox "备注" [ref=e298]
+                - button "删除事件 便便" [ref=e299] [cursor=pointer]:
+                  - img [ref=e300]
+              - article [ref=e303]:
+                - generic "是否显示到首页快捷事件" [ref=e304]:
+                  - checkbox "快捷" [checked] [ref=e305]
+                  - generic [ref=e306]: 快捷
+                - textbox "事件名" [ref=e307]: 训练
+                - generic "训练 时间类型" [ref=e308]:
+                  - button "单点" [ref=e309] [cursor=pointer]
+                  - button "时段" [ref=e310] [cursor=pointer]
+                - textbox "备注" [ref=e311]
+                - button "删除事件 训练" [ref=e312] [cursor=pointer]:
+                  - img [ref=e313]
+              - article [ref=e316]:
+                - generic "是否显示到首页快捷事件" [ref=e317]:
+                  - checkbox "快捷" [ref=e318]
+                  - generic [ref=e319]: 快捷
+                - textbox "事件名" [ref=e320]: 睡觉
+                - generic "睡觉 时间类型" [ref=e321]:
+                  - button "单点" [ref=e322] [cursor=pointer]
+                  - button "时段" [ref=e323] [cursor=pointer]
+                - textbox "备注" [ref=e324]
+                - button "删除事件 睡觉" [ref=e325] [cursor=pointer]:
+                  - img [ref=e326]
+              - article [ref=e329]:
+                - generic "是否显示到首页快捷事件" [ref=e330]:
+                  - checkbox "快捷" [ref=e331]
+                  - generic [ref=e332]: 快捷
+                - textbox "事件名" [ref=e333]: 称重
+                - generic "称重 时间类型" [ref=e334]:
+                  - button "单点" [ref=e335] [cursor=pointer]
+                  - button "时段" [ref=e336] [cursor=pointer]
+                - textbox "备注" [ref=e337]: 早餐前称重。
+                - button "删除事件 称重" [ref=e338] [cursor=pointer]:
+                  - img [ref=e339]
+              - article [ref=e342]:
+                - generic "是否显示到首页快捷事件" [ref=e343]:
+                  - checkbox "快捷" [ref=e344]
+                  - generic [ref=e345]: 快捷
+                - textbox "事件名" [ref=e346]: 疫苗
+                - generic "疫苗 时间类型" [ref=e347]:
+                  - button "单点" [ref=e348] [cursor=pointer]
+                  - button "时段" [ref=e349] [cursor=pointer]
+                - textbox "备注" [ref=e350]
+                - button "删除事件 疫苗" [ref=e351] [cursor=pointer]:
+                  - img [ref=e352]
+              - article [ref=e355]:
+                - generic "是否显示到首页快捷事件" [ref=e356]:
+                  - checkbox "快捷" [ref=e357]
+                  - generic [ref=e358]: 快捷
+                - textbox "事件名" [ref=e359]: 驱虫
+                - generic "驱虫 时间类型" [ref=e360]:
+                  - button "单点" [ref=e361] [cursor=pointer]
+                  - button "时段" [ref=e362] [cursor=pointer]
+                - textbox "备注" [ref=e363]
+                - button "删除事件 驱虫" [ref=e364] [cursor=pointer]:
+                  - img [ref=e365]
+            - generic [ref=e368]:
+              - generic [ref=e369]: 勾选“快捷”的事件会出现在时间轴首页；点快捷后会打开预填好的新增表单。
+              - button "恢复默认" [ref=e370] [cursor=pointer]
+    - img [ref=e151] [cursor=pointer]
+    - navigation "主导航" [ref=e152]:
+      - generic [ref=e154]:
+        - generic [ref=e155] [cursor=pointer]:
+          - img [ref=e158]
+          - generic [ref=e161]: 时间轴
+        - generic [ref=e162] [cursor=pointer]:
+          - img [ref=e165]
+          - generic [ref=e167]: 监听
+        - generic [ref=e168] [cursor=pointer]:
+          - img [ref=e171]
+          - generic [ref=e174]: 洞察
+        - generic [ref=e175] [cursor=pointer]:
+          - img [ref=e178]
+          - generic [ref=e181]: 我的
+  - button "Open Next.js Dev Tools" [ref=e187] [cursor=pointer]:
+    - img [ref=e188]
+  - alert [ref=e191]

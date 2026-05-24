@@ -1,0 +1,128 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - region "手机端今日工作台" [ref=e371]:
+        - generic [ref=e372]:
+          - generic [ref=e373]:
+            - text: PetDaily
+            - strong [ref=e374]: 豆包
+          - generic [ref=e375]:
+            - generic [ref=e376]:
+              - term [ref=e377]: 今日
+              - definition [ref=e378]: "2"
+            - generic [ref=e379]:
+              - term [ref=e380]: 体重
+              - definition [ref=e381]: 3.2kg
+        - generic [ref=e382]:
+          - generic [ref=e383]:
+            - paragraph [ref=e385]: 快捷事件
+            - button "配置快捷事件" [ref=e386] [cursor=pointer]:
+              - img [ref=e387]
+          - generic [ref=e390]:
+            - button "早餐" [ref=e391] [cursor=pointer]:
+              - strong [ref=e392]: 早餐
+            - button "晚餐" [ref=e393] [cursor=pointer]:
+              - strong [ref=e394]: 晚餐
+            - button "尿尿" [ref=e395] [cursor=pointer]:
+              - strong [ref=e396]: 尿尿
+            - button "便便" [ref=e397] [cursor=pointer]:
+              - strong [ref=e398]: 便便
+            - button "训练" [ref=e399] [cursor=pointer]:
+              - strong [ref=e400]: 训练
+        - generic [ref=e401]:
+          - generic [ref=e402]:
+            - strong [ref=e403]: 提醒
+            - generic [ref=e404]: 优先显示到点事项
+          - generic [ref=e405]:
+            - article [ref=e406]:
+              - generic [ref=e407]:
+                - strong [ref=e408]: 08:05
+                - text: 外出如厕
+              - paragraph [ref=e409]: 早餐后外出如厕
+              - generic [ref=e410]: 已到点
+              - generic [ref=e411]:
+                - button "完成提醒" [ref=e412] [cursor=pointer]:
+                  - img [ref=e413]
+                - button "跳过提醒" [ref=e415] [cursor=pointer]:
+                  - img [ref=e416]
+                - button "暂停提醒" [ref=e418] [cursor=pointer]:
+                  - img [ref=e419]
+            - article [ref=e421]:
+              - generic [ref=e422]:
+                - strong [ref=e423]: 09:00
+                - text: 驱虫
+              - paragraph [ref=e424]: 下一次体内外驱虫
+              - generic [ref=e425]: 已到点
+              - generic [ref=e426]:
+                - button "完成提醒" [ref=e427] [cursor=pointer]:
+                  - img [ref=e428]
+                - button "跳过提醒" [ref=e430] [cursor=pointer]:
+                  - img [ref=e431]
+                - button "暂停提醒" [ref=e433] [cursor=pointer]:
+                  - img [ref=e434]
+        - generic [ref=e436]:
+          - generic [ref=e437]:
+            - generic [ref=e438]:
+              - strong [ref=e439]: 当日事件
+              - generic [ref=e440]: 2 条
+            - generic [ref=e441]:
+              - button "日" [ref=e442] [cursor=pointer]
+              - button "周" [ref=e443] [cursor=pointer]
+            - generic [ref=e446]:
+              - generic [ref=e449] [cursor=pointer]:
+                - strong [ref=e450]: 今天
+                - emphasis [ref=e451]: 周日
+              - generic [ref=e454] [cursor=pointer]:
+                - strong [ref=e455]: 05/05
+                - emphasis [ref=e456]: 周二
+              - generic [ref=e459] [cursor=pointer]:
+                - strong [ref=e460]: 05/04
+                - emphasis [ref=e461]: 周一
+              - generic [ref=e464] [cursor=pointer]:
+                - strong [ref=e465]: 05/03
+                - emphasis [ref=e466]: 周日
+              - generic [ref=e469] [cursor=pointer]:
+                - strong [ref=e470]: 05/02
+                - emphasis [ref=e471]: 周六
+              - generic [ref=e474] [cursor=pointer]:
+                - strong [ref=e475]: 05/01
+                - emphasis [ref=e476]: 周五
+          - generic [ref=e477]:
+            - generic [ref=e479]:
+              - article [ref=e482]:
+                - generic [ref=e483]: 16:46
+                - img [ref=e485]
+                - generic [ref=e489]:
+                  - strong [ref=e490]: 早餐完成
+                  - generic [ref=e491]: 45g
+                - button "查看 早餐完成 详情" [ref=e492] [cursor=pointer]:
+                  - img [ref=e494]
+              - button "删除" [ref=e497] [cursor=pointer]
+            - generic [ref=e499]:
+              - article [ref=e502]:
+                - generic [ref=e503]: 08:00
+                - img [ref=e505]
+                - generic [ref=e507]:
+                  - strong [ref=e509]: 上午睡觉
+                  - paragraph [ref=e510]: 睡得很沉
+                - button "查看 上午睡觉 详情" [ref=e511] [cursor=pointer]:
+                  - img [ref=e513]
+              - button "删除" [ref=e516] [cursor=pointer]
+    - img [ref=e151] [cursor=pointer]
+    - navigation "主导航" [ref=e152]:
+      - generic [ref=e154]:
+        - generic [ref=e155] [cursor=pointer]:
+          - img [ref=e158]
+          - generic [ref=e161]: 时间轴
+        - generic [ref=e162] [cursor=pointer]:
+          - img [ref=e165]
+          - generic [ref=e167]: 监听
+        - generic [ref=e168] [cursor=pointer]:
+          - img [ref=e171]
+          - generic [ref=e174]: 洞察
+        - generic [ref=e175] [cursor=pointer]:
+          - img [ref=e178]
+          - generic [ref=e181]: 我的
+  - button "Open Next.js Dev Tools" [ref=e187] [cursor=pointer]:
+    - img [ref=e188]
+  - alert [ref=e191]

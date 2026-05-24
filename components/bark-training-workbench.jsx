@@ -35,6 +35,19 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
+function getTrainingAudioErrorText(audio, playError) {
+  if (playError?.name === "NotAllowedError") return "浏览器拦截了播放，请再点一次或使用原生播放器。";
+  if (playError?.name === "NotSupportedError") return "这段本地音频格式当前浏览器不支持。";
+  if (String(playError?.message || "").toLowerCase().includes("failed to fetch")) {
+    return "音频文件没有成功读到，可能是本地样本缺失或路径已经失效。";
+  }
+  const code = audio?.error?.code;
+  if (code === 2) return "本地音频读取失败，可能是文件路径失效。";
+  if (code === 3) return "本地音频解码失败，文件可能不完整。";
+  if (code === 4) return "浏览器当前不支持这段本地音频。";
+  return "音频播放失败，请稍后重试。";
+}
+
 function Metric({ label, value, hint }) {
   return (
     <div className="trainingMetric">
@@ -222,7 +235,7 @@ export default function BarkTrainingWorkbench() {
   function playSample(sample) {
     if (!audioRef.current || !sample?.localAudioUrl) return;
     audioRef.current.src = sample.localAudioUrl;
-    audioRef.current.play().catch((playError) => setError(playError.message || "音频播放失败。"));
+    audioRef.current.play().catch((playError) => setError(getTrainingAudioErrorText(audioRef.current, playError)));
   }
 
   const report = state?.trainingReport || null;

@@ -7,6 +7,7 @@ import {
   AudioWaveform,
   Brain,
   CheckCircle2,
+  ChevronRight,
   Database,
   Download,
   FlaskConical,
@@ -211,6 +212,34 @@ function MetricChip({ label, value }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function BarkSubpageTop({ title, subtitle, onBack }) {
+  return (
+    <div className="subpageTop">
+      <button className="backButton" type="button" onClick={onBack}>
+        返回
+      </button>
+      <div>
+        <strong>{title}</strong>
+        {subtitle ? <span>{subtitle}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function BarkSectionCard({ icon: Icon, title, subtitle, meta, onClick }) {
+  return (
+    <button className="sectionMenuCard" type="button" onClick={onClick}>
+      <span className="sectionMenuIcon">{Icon ? <Icon size={18} /> : null}</span>
+      <div>
+        <strong>{title}</strong>
+        <small>{subtitle}</small>
+      </div>
+      {meta ? <em>{meta}</em> : null}
+      <ChevronRight size={16} />
+    </button>
   );
 }
 
@@ -427,6 +456,9 @@ function VoiceprintDetails({ sample, compact = false }) {
 function getAudioErrorText(audio, playError) {
   if (playError?.name === "NotAllowedError") return "浏览器拦截了自动播放，请点下方原生播放器。";
   if (playError?.name === "NotSupportedError") return "这段音频格式当前浏览器不支持。";
+  if (String(playError?.message || "").toLowerCase().includes("failed to fetch")) {
+    return "音频文件没有成功取到，可能是网络、登录态或对象存储读取失败。";
+  }
   const code = audio?.error?.code;
   if (code === 2) return "音频网络加载失败，请稍后重试。";
   if (code === 3) return "音频解码失败，可能是片段文件不完整。";
@@ -437,10 +469,7 @@ function getAudioErrorText(audio, playError) {
 async function getAudioRouteDiagnostic(audioSrc) {
   if (!audioSrc?.startsWith("/api/")) return "";
   try {
-    const response = await fetch(audioSrc, {
-      headers: { Range: "bytes=0-0" },
-      cache: "no-store"
-    });
+    const response = await fetch(audioSrc, { method: "HEAD", credentials: "same-origin" });
     if (response.status === 206 || response.ok) return "音频接口可读取，当前更像是浏览器解码或格式兼容问题。";
     if (response.status === 404) return "音频索引存在但文件对象没有找到，需要重新采集或检查 R2 同步。";
     if (response.status === 422) return "这条记录保存的是空音频，只能用于声纹分析。";
@@ -1015,6 +1044,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [meydaReady, setMeydaReady] = useState(false);
   const [mediaRecorderReady, setMediaRecorderReady] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
 
   const audioRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -1778,7 +1808,7 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
       // Some mobile browsers reject currentTime before metadata is loaded.
     }
 
-      setPlayer({ sampleId: sample.id, src: "", status: "loading", error: "" });
+    setPlayer({ sampleId: sample.id, src: "", status: "loading", error: "" });
 
     try {
       // Revoke previous blob URL
@@ -1787,57 +1817,67 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
         playerObjectUrlRef.current = "";
       }
 
-      // Fetch audio as Blob first, then create Object URL.
-      // This avoids iOS Safari autoplay restrictions because the audio element
-      // gets a fully loaded blob:// src instead of a streaming network URL.
-      // It also fixes cross-origin and content-type negotiation issues.
-      let blobUrl = "";
-      try {
-        const fetchResponse = await fetch(audioSrc);
-        if (fetchResponse.ok) {
-          const contentType = fetchResponse.headers.get("content-type") || sample.audioContentType || "";
-          const audioBuffer = await fetchResponse.arrayBuffer();
-          if (audioBuffer.byteLength > 0) {
-            const blob = contentType ? new Blob([audioBuffer], { type: contentType }) : new Blob([audioBuffer]);
-            blobUrl = URL.createObjectURL(blob);
-            playerObjectUrlRef.current = blobUrl;
+      async function waitForAudioReady() {
+        await new Promise((resolve, reject) => {
+          const onReady = () => {
+            cleanup();
+            resolve();
+          };
+          const onError = () => {
+            cleanup();
+            reject(audio.error || new Error("载入失败"));
+          };
+          const cleanup = () => {
+            audio.removeEventListener("canplaythrough", onReady);
+            audio.removeEventListener("canplay", onReady);
+            audio.removeEventListener("error", onError);
+            clearTimeout(timeout);
+          };
+          if (audio.readyState >= 2) {
+            resolve();
+            return;
           }
-        }
-      } catch {
-        // Fall through to direct src assignment
+          audio.addEventListener("canplaythrough", onReady, { once: true });
+          audio.addEventListener("canplay", onReady, { once: true });
+          audio.addEventListener("error", onError, { once: true });
+          const timeout = setTimeout(() => {
+            cleanup();
+            resolve();
+          }, 4000);
+        });
       }
 
-      const resolvedSrc = blobUrl || audioSrc;
-      audio.src = resolvedSrc;
-      audio.load();
-
-      // Wait for enough data before attempting play
-      await new Promise((resolve, reject) => {
-        const onReady = () => { cleanup(); resolve(); };
-        const onError = () => { cleanup(); reject(audio.error || new Error("载入失败")); };
-        const cleanup = () => {
-          audio.removeEventListener("canplaythrough", onReady);
-          audio.removeEventListener("canplay", onReady);
-          audio.removeEventListener("error", onError);
-          clearTimeout(timeout);
-        };
-        // If already ready (e.g. cached blob), resolve immediately
-        if (audio.readyState >= 3) { resolve(); return; }
-        audio.addEventListener("canplaythrough", onReady, { once: true });
-        audio.addEventListener("canplay", onReady, { once: true });
-        audio.addEventListener("error", onError, { once: true });
-        const timeout = setTimeout(() => {
-          cleanup();
-          // Try to play anyway after timeout
-          resolve();
-        }, 5000);
-      });
-
-      const playPromise = audio.play();
-      if (playPromise?.catch) {
-        await playPromise;
+      async function loadAndPlay(source) {
+        audio.src = source;
+        audio.load();
+        await waitForAudioReady();
+        const playPromise = audio.play();
+        if (playPromise?.catch) await playPromise;
       }
-      setPlayer({ sampleId: sample.id, src: resolvedSrc, status: "playing", error: "" });
+
+      async function createBlobUrl() {
+        const fetchResponse = await fetch(audioSrc, { credentials: "same-origin" });
+        if (!fetchResponse.ok) return "";
+        const contentType = fetchResponse.headers.get("content-type") || sample.audioContentType || "";
+        const audioBuffer = await fetchResponse.arrayBuffer();
+        if (!audioBuffer.byteLength) return "";
+        const blob = contentType ? new Blob([audioBuffer], { type: contentType }) : new Blob([audioBuffer]);
+        const blobUrl = URL.createObjectURL(blob);
+        playerObjectUrlRef.current = blobUrl;
+        return blobUrl;
+      }
+
+      try {
+        // Prefer direct source playback first; Android Chrome is often happier
+        // with the native media pipeline than with an app-side fetch+blob hop.
+        await loadAndPlay(audioSrc);
+      } catch (directError) {
+        const blobUrl = await createBlobUrl().catch(() => "");
+        if (!blobUrl) throw directError;
+        await loadAndPlay(blobUrl);
+      }
+
+      setPlayer({ sampleId: sample.id, src: audioSrc, status: "playing", error: "" });
     } catch (playError) {
       const message = getAudioErrorText(audio, playError);
       const diagnostic = await getAudioRouteDiagnostic(audioSrc);
@@ -1890,7 +1930,79 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
         <MetricChip label="已归类" value={summary.clustered} />
       </div>
 
-      <div className="barkLibraryLayout">
+      {activeSection === "home" ? (
+        <div className="sectionMenuGrid barkHomeGrid">
+          <BarkSectionCard
+            icon={Mic}
+            title="实时监听"
+            subtitle="启动麦克风、查看分数和最近样本"
+            meta={statusText}
+            onClick={() => setActiveSection("listen")}
+          />
+          <BarkSectionCard
+            icon={AudioWaveform}
+            title="叫声段与声纹"
+            subtitle="按日期浏览，可播放、标注和看详情"
+            meta={`${summary.sessions} 段`}
+            onClick={() => setActiveSection("sessions")}
+          />
+          <BarkSectionCard
+            icon={FlaskConical}
+            title="本地训练"
+            subtitle="拉取云端数据、本地标注训练、再推送"
+            meta={`${localTraining?.summary?.sampleCount || 0} 样本`}
+            onClick={() => setActiveSection("training")}
+          />
+          <BarkSectionCard
+            icon={Brain}
+            title="细分分析"
+            subtitle="查看声音组、画像和时间分布"
+            meta={`${analysis.sessionStats.total || 0} 段`}
+            onClick={() => setActiveSection("analysis")}
+          />
+        </div>
+      ) : (
+        <BarkSubpageTop
+          title={{
+            listen: "实时监听",
+            sessions: "叫声段与声纹",
+            training: "本地训练",
+            analysis: "细分分析"
+          }[activeSection]}
+          subtitle={{
+            listen: "只看采集与最近样本",
+            sessions: "按日期切换，点击详情再展开分析",
+            training: "本地流程独立一页处理",
+            analysis: "统计和画像单独查看"
+          }[activeSection]}
+          onBack={() => setActiveSection("home")}
+        />
+      )}
+
+      <div className={`barkPlayerDock ${player.sampleId ? "active" : ""}`}>
+        <div>
+          <strong>{activePlayerSample ? formatDateTime(activePlayerSample.capturedAt) : "选择一个片段"}</strong>
+          <span>{player.status === "playing" ? "播放中" : player.status === "loading" ? "载入中" : player.status === "error" ? "播放失败" : "可手动播放"}</span>
+        </div>
+        {player.src ? <a href={player.src} target="_blank" rel="noreferrer">打开原音频</a> : null}
+        <audio
+          ref={audioRef}
+          className="barkNativePlayer"
+          controls
+          preload="auto"
+          playsInline
+          onCanPlay={() => setPlayer((current) => (current.sampleId && current.status !== "playing" ? { ...current, status: "ready" } : current))}
+          onPlay={() => setPlayer((current) => (current.sampleId ? { ...current, status: "playing" } : current))}
+          onPause={() => setPlayer((current) => (current.sampleId ? { ...current, status: "idle" } : current))}
+          onEnded={() => setPlayer((current) => ({ ...current, status: "idle", error: "" }))}
+          onError={() => setPlayer((current) => (current.sampleId ? { ...current, status: "error", error: getAudioErrorText(audioRef.current) } : current))}
+        />
+      </div>
+      {player.error ? <p className="formError">{player.error}</p> : null}
+
+      {activeSection !== "home" ? (
+      <div className={`barkLibraryLayout barkView-${activeSection}`}>
+        {activeSection === "listen" ? (
         <section className="contentPanel barkMonitorPanel dense">
           <div className="sectionHeading">
             <p>实时检测</p>
@@ -1931,7 +2043,9 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
             )}
           </div>
         </section>
+        ) : null}
 
+        {activeSection === "sessions" ? (
         <section className="contentPanel barkLibraryPanel">
           <div className="sectionHeading">
             <p>自动聚类</p>
@@ -1953,26 +2067,6 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
             rebuilding={rebuildingClusters}
           />
           <BarkLabelManager labels={labelOptions} onCreate={createProductionLabel} onDelete={deleteProductionLabel} compact />
-          <div className={`barkPlayerDock ${player.sampleId ? "active" : ""}`}>
-            <div>
-              <strong>{activePlayerSample ? formatDateTime(activePlayerSample.capturedAt) : "选择一个片段"}</strong>
-              <span>{player.status === "playing" ? "播放中" : player.status === "loading" ? "载入中" : player.status === "error" ? "播放失败" : "可手动播放"}</span>
-            </div>
-          {player.src ? <a href={player.src} target="_blank" rel="noreferrer">打开原音频</a> : null}
-            <audio
-              ref={audioRef}
-              className="barkNativePlayer"
-              controls
-              preload="auto"
-              playsInline
-              onCanPlay={() => setPlayer((current) => (current.sampleId && current.status !== "playing" ? { ...current, status: "ready" } : current))}
-              onPlay={() => setPlayer((current) => (current.sampleId ? { ...current, status: "playing" } : current))}
-              onPause={() => setPlayer((current) => (current.sampleId ? { ...current, status: "idle" } : current))}
-              onEnded={() => setPlayer((current) => ({ ...current, status: "idle", error: "" }))}
-              onError={() => setPlayer((current) => (current.sampleId ? { ...current, status: "error", error: getAudioErrorText(audioRef.current) } : current))}
-            />
-          </div>
-          {player.error ? <p className="formError">{player.error}</p> : null}
           <div className="barkClusterList">
             <CompactSessionList
               dateGroups={sessionDateGroups}
@@ -2012,17 +2106,21 @@ export default function BarkMonitorPanel({ pet, timelineEvents, onTimelineCreate
             labelOptions={labelOptions}
           />
         </section>
-        <LocalTrainingPanel
-          state={localTraining}
-          runningAction={runningLocalAction}
-          onAction={runLocalAction}
-          onLabel={labelLocalSample}
-          onPlay={playSample}
-          player={player}
-          labelOptions={localTraining?.labelOptions || labelOptions}
-        />
-        <AnalysisPanel analysis={analysis} sessions={sessions} />
+        ) : null}
+        {activeSection === "training" ? (
+          <LocalTrainingPanel
+            state={localTraining}
+            runningAction={runningLocalAction}
+            onAction={runLocalAction}
+            onLabel={labelLocalSample}
+            onPlay={playSample}
+            player={player}
+            labelOptions={localTraining?.labelOptions || labelOptions}
+          />
+        ) : null}
+        {activeSection === "analysis" ? <AnalysisPanel analysis={analysis} sessions={sessions} /> : null}
       </div>
+      ) : null}
     </section>
   );
 }

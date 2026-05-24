@@ -1,79 +1,98 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Popup, Selector } from "antd-mobile";
-import { Camera, ImagePlus, Scale, Trash2, Upload, Utensils, X } from "lucide-react";
+import { Camera, ChevronDown, ImagePlus, Trash2, Upload, X } from "lucide-react";
 import { compressImageFile } from "@/components/image-file";
-import { EVENT_TYPES } from "@/lib/domain";
 
-const quickTypes = [
-  { type: "FOOD", icon: Utensils },
-  { type: "POTTY", icon: Camera },
-  { type: "STOOL", icon: Camera },
-  { type: "WEIGHT", icon: Scale },
-  { type: "VACCINE", icon: Camera },
-  { type: "DEWORM", icon: Camera },
-  { type: "PHOTO", icon: Camera },
-  { type: "NOTE", icon: Camera }
-];
-
-const notePresets = {
-  POTTY: ["尿对位置", "尿错位置", "外出完成", "尿垫完成"],
-  STOOL: ["便便正常", "偏软", "偏硬", "位置正确"],
-  FOOD: ["吃完", "剩了一点", "食欲很好", "换粮观察"],
-  NOTE: ["睡觉", "玩耍", "训练", "异常观察"]
-};
-
-function localDateTimeValue() {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 16);
+function localDateTimeValue(value = new Date()) {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
 }
 
-export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
+function createDefaultPreset() {
+  return { id: "default-event", label: "事件", note: "", mode: "point" };
+}
+
+export default function QuickRecordSheet({
+  open,
+  petId,
+  eventPresets = [],
+  selectedPresetId,
+  onClose,
+  onCreate
+}) {
   const cameraInputRef = useRef(null);
   const albumInputRef = useRef(null);
-  const [type, setType] = useState("FOOD");
+  const presetOptions = useMemo(() => {
+    const configured = eventPresets
+      .filter((item) => item?.label?.trim())
+      .map((item) => ({
+        id: item.id,
+        label: item.label.trim(),
+        note: item.note || "",
+        mode: item.mode === "range" ? "range" : "point"
+      }));
+
+    return configured.length ? configured : [createDefaultPreset()];
+  }, [eventPresets]);
+  const [activePresetId, setActivePresetId] = useState("");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [amount, setAmount] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [happenedAt, setHappenedAt] = useState(localDateTimeValue());
+  const [rangeMode, setRangeMode] = useState(false);
   const [endedAt, setEndedAt] = useState("");
+  const [photoExpanded, setPhotoExpanded] = useState(false);
   const [photoProcessing, setPhotoProcessing] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const selected = EVENT_TYPES[type];
-  const defaultTitle = useMemo(() => `${selected?.label || "日常"}记录`, [selected]);
-  const selectedNotePresets = notePresets[type] || [];
-  const supportsRange = type === "NOTE";
+  const applyPreset = useCallback((preset) => {
+    if (!preset) return;
+    const now = new Date();
+    const nowValue = localDateTimeValue(now);
+    const nextRangeMode = preset.mode === "range";
+
+    setActivePresetId(preset.id);
+    setTitle(preset.label || "事件");
+    setNote(preset.note || "");
+    setRangeMode(nextRangeMode);
+    setHappenedAt(nextRangeMode ? localDateTimeValue(new Date(now.getTime() - 30 * 60000)) : nowValue);
+    setEndedAt(nextRangeMode ? nowValue : "");
+    setFormError("");
+  }, []);
 
   useEffect(() => {
-    if (supportsRange) return;
+    if (!open || !presetOptions.length) return;
+    setPhotoUrl("");
+    setPhotoError("");
+    setPhotoExpanded(false);
+    const nextPreset = presetOptions.find((preset) => preset.id === selectedPresetId) || presetOptions[0];
+    applyPreset(nextPreset);
+  }, [applyPreset, open, presetOptions, selectedPresetId]);
+
+  useEffect(() => {
+    if (photoUrl) setPhotoExpanded(true);
+  }, [photoUrl]);
+
+  useEffect(() => {
+    if (rangeMode) return;
     setEndedAt("");
-  }, [supportsRange]);
+  }, [rangeMode]);
 
   if (!open) return null;
-
-  function appendNotePreset(value) {
-    setNote((current) => {
-      if (!current) return value;
-      if (current.includes(value)) return current;
-      return `${current}；${value}`;
-    });
-  }
 
   async function selectFile(file) {
     if (!file) return;
     setPhotoProcessing(true);
     setPhotoError("");
+    setPhotoExpanded(true);
     try {
       const dataUrl = await compressImageFile(file);
       setPhotoUrl(dataUrl);
-      if (!title && type === "PHOTO") {
-        setTitle("手机拍摄记录");
-      }
     } catch (error) {
       setPhotoError(error.message || "照片处理失败");
     } finally {
@@ -89,35 +108,43 @@ export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
   async function handleSubmit(event) {
     event.preventDefault();
     setSaving(true);
+    setFormError("");
+
     try {
       const startAt = new Date(happenedAt);
-      const endAt = endedAt ? new Date(endedAt) : null;
-      const hasValidRange = supportsRange && endAt && endAt.getTime() > startAt.getTime();
-      const metadata = hasValidRange
-        ? {
-            endedAt: endAt.toISOString(),
-            durationMs: Math.max(60000, endAt.getTime() - startAt.getTime())
-          }
-        : undefined;
+      if (!Number.isFinite(startAt.getTime())) {
+        setFormError("开始时间格式不正确。");
+        return;
+      }
+
+      let metadata = undefined;
+      if (rangeMode) {
+        const endAt = new Date(endedAt);
+        if (!Number.isFinite(endAt.getTime()) || endAt.getTime() <= startAt.getTime()) {
+          setFormError("结束时间需要晚于开始时间。");
+          return;
+        }
+        metadata = {
+          endedAt: endAt.toISOString(),
+          durationMs: Math.max(60000, endAt.getTime() - startAt.getTime())
+        };
+      }
 
       await onCreate({
         petId,
-        type,
-        title: title || defaultTitle,
-        note,
-        amount,
-        unit: selected?.unit || "",
-        photoUrl,
+        type: "NOTE",
+        title: title.trim() || presetOptions.find((preset) => preset.id === activePresetId)?.label || "事件",
+        note: note.trim(),
+        amount: "",
+        unit: "",
+        photoUrl: photoUrl.trim(),
         happenedAt: startAt.toISOString(),
         metadata
       });
-      setTitle("");
-      setNote("");
-      setAmount("");
+
       setPhotoUrl("");
       setPhotoError("");
-      setHappenedAt(localDateTimeValue());
-      setEndedAt("");
+      setPhotoExpanded(false);
       onClose();
     } finally {
       setSaving(false);
@@ -136,15 +163,15 @@ export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
       <section className="quickSheet" aria-label="快速记录">
         <div className="sheetHeader">
           <div>
-            <p>快速记录</p>
-            <span>把刚发生的事情放进时间日记</span>
+            <p>新增事件</p>
+            <span>先选事件，再确认时间和备注。</span>
           </div>
           <button className="iconButton" type="button" onClick={onClose} aria-label="关闭">
             <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="recordForm">
+        <form onSubmit={handleSubmit} className="recordForm compactRecordForm">
           <input
             ref={cameraInputRef}
             className="hiddenFileInput"
@@ -168,29 +195,46 @@ export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
           />
 
           <Selector
-            className="quickTypeSelector"
-            value={[type]}
+            className="quickTypeSelector eventPresetSelector"
+            value={[activePresetId]}
             columns={4}
             showCheckMark={false}
-            onChange={(value) => value[0] && setType(value[0])}
-            options={quickTypes.map(({ type: itemType, icon: Icon }) => ({
-              value: itemType,
-              label: (
-                <span className="quickTypeOption">
-                  <Icon size={16} />
-                  {EVENT_TYPES[itemType].label}
-                </span>
-              )
+            onChange={(value) => {
+              const nextPreset = presetOptions.find((preset) => preset.id === value[0]);
+              applyPreset(nextPreset);
+            }}
+            options={presetOptions.map((preset) => ({
+              value: preset.id,
+              label: <span className="quickTypeOption quickPresetLabel">{preset.label}</span>
             }))}
           />
 
           <label>
-            标题
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={defaultTitle} />
+            事件名称
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="比如 晚餐 / 尿尿 / 训练" />
           </label>
 
-          {supportsRange ? (
-            <div className="formGridTwo">
+          <Selector
+            className="quickTypeSelector rangeModeSelector"
+            value={[rangeMode ? "range" : "point"]}
+            columns={2}
+            showCheckMark={false}
+            onChange={(value) => {
+              if (!value[0]) return;
+              const nextRangeMode = value[0] === "range";
+              setRangeMode(nextRangeMode);
+              if (nextRangeMode && !endedAt) {
+                setEndedAt(localDateTimeValue());
+              }
+            }}
+            options={[
+              { value: "point", label: "单点事件" },
+              { value: "range", label: "持续时段" }
+            ]}
+          />
+
+          {rangeMode ? (
+            <div className="formGridTwo rangeGrid">
               <label>
                 开始时间
                 <input type="datetime-local" value={happenedAt} onChange={(event) => setHappenedAt(event.target.value)} />
@@ -201,84 +245,86 @@ export default function QuickRecordSheet({ open, petId, onClose, onCreate }) {
               </label>
             </div>
           ) : (
-            <div className="formGridTwo">
-              <label>
-                数值
-                <input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={selected?.unit ? `如 45 ${selected.unit}` : "可选"} inputMode="decimal" />
-              </label>
-              <label>
-                时间
-                <input type="datetime-local" value={happenedAt} onChange={(event) => setHappenedAt(event.target.value)} />
-              </label>
-            </div>
-          )}
-
-          <div className="recordPhotoField">
-            <div className="photoFieldTopline">
-              <span>照片（可选）</span>
-              <div className="photoFieldActions">
-                <button
-                  className="secondaryButton"
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  disabled={photoProcessing}
-                >
-                  <Camera size={16} />
-                  拍照
-                </button>
-                <button
-                  className="secondaryButton"
-                  type="button"
-                  onClick={() => albumInputRef.current?.click()}
-                  disabled={photoProcessing}
-                >
-                  <Upload size={16} />
-                  相册
-                </button>
-              </div>
-            </div>
-            {photoUrl ? (
-              <div className="recordPhotoPreview">
-                <img src={photoUrl} alt="待保存记录照片预览" />
-                <button className="miniDangerButton" type="button" onClick={clearPhoto}>
-                  <Trash2 size={15} />
-                  移除
-                </button>
-              </div>
-            ) : null}
             <label>
-              图片 URL
-              <input
-                value={photoUrl}
-                onChange={(event) => {
-                  setPhotoUrl(event.target.value);
-                  setPhotoError("");
-                }}
-                placeholder="/photos/westie-window.svg"
-              />
+              发生时间
+              <input type="datetime-local" value={happenedAt} onChange={(event) => setHappenedAt(event.target.value)} />
             </label>
-            {photoProcessing ? (
-              <p className="formHint">
-                <ImagePlus size={14} />
-                正在压缩照片...
-              </p>
-            ) : null}
-            {photoError ? <p className="formError">{photoError}</p> : null}
-          </div>
+          )}
 
           <label>
             备注
-            <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="例如：饭后 20 分钟完成尿尿，奖励及时。" />
+            <textarea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="可选，比如饭后 20 分钟完成尿尿。"
+            />
           </label>
-          {selectedNotePresets.length ? (
-            <div className="notePresetStrip" aria-label="常用备注">
-              {selectedNotePresets.map((preset) => (
-                <button key={preset} type="button" onClick={() => appendNotePreset(preset)}>
-                  {preset}
-                </button>
-              ))}
-            </div>
-          ) : null}
+
+          <section className={`recordPhotoField subtlePhotoField ${photoExpanded ? "expanded" : ""}`}>
+            <button
+              className="photoFieldToggle"
+              type="button"
+              onClick={() => setPhotoExpanded((current) => !current)}
+              aria-expanded={photoExpanded}
+            >
+              <span>照片（可选）</span>
+              <ChevronDown size={16} />
+            </button>
+
+            {photoExpanded ? (
+              <div className="photoFieldBody">
+                <div className="photoFieldActions">
+                  <button
+                    className="secondaryButton"
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={photoProcessing}
+                  >
+                    <Camera size={16} />
+                    拍照
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    type="button"
+                    onClick={() => albumInputRef.current?.click()}
+                    disabled={photoProcessing}
+                  >
+                    <Upload size={16} />
+                    相册
+                  </button>
+                </div>
+                {photoUrl ? (
+                  <div className="recordPhotoPreview">
+                    <img src={photoUrl} alt="待保存记录照片预览" />
+                    <button className="miniDangerButton" type="button" onClick={clearPhoto}>
+                      <Trash2 size={15} />
+                      移除
+                    </button>
+                  </div>
+                ) : null}
+                <label>
+                  图片 URL
+                  <input
+                    value={photoUrl}
+                    onChange={(event) => {
+                      setPhotoUrl(event.target.value);
+                      setPhotoError("");
+                    }}
+                    placeholder="/photos/westie-window.svg"
+                  />
+                </label>
+                {photoProcessing ? (
+                  <p className="formHint">
+                    <ImagePlus size={14} />
+                    正在压缩照片...
+                  </p>
+                ) : null}
+                {photoError ? <p className="formError">{photoError}</p> : null}
+              </div>
+            ) : null}
+          </section>
+
+          {formError ? <p className="formError">{formError}</p> : null}
 
           <Button className="quickSubmitButton" color="primary" block type="submit" loading={saving}>
             {saving ? "保存中..." : "保存记录"}
